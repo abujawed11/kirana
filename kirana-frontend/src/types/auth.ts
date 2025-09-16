@@ -35,3 +35,19 @@ export interface ApiErrorShape {
 }
 
 export type ApiResponse<T> = ApiSuccess<T> | ApiErrorShape;
+
+
+
+export type OtpChannel = "sms" | "email";
+
+export interface VerifyOtpPayload {
+  phone?: string;   // one of phone/email is required based on your backend
+  email?: string;
+  code: string;     // 6-digit OTP
+}
+
+export interface ResendOtpPayload {
+  phone?: string;
+  email?: string;
+  channel?: OtpChannel; // optional: force sms/email
+}
