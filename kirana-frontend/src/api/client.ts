@@ -10,7 +10,7 @@ export interface RequestOptions<TBody = unknown> {
 
 // Keep this simple to avoid env typing issues.
 // TODO: wire to Expo extra if you want: Constants.expoConfig?.extra?.apiUrl
-const BASE_URL = "http://localhost:5000";
+const BASE_URL = "http://10.20.2.78:5000";
 
 export class HttpError<T = unknown> extends Error {
   status: number;

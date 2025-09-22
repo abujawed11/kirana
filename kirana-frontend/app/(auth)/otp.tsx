@@ -49,27 +49,50 @@ export default function SellerOtp() {
     setCode(v);
   };
 
+  // const onVerify = async () => {
+  //   if (code.length !== 6) {
+  //     Alert.alert("Invalid code", "Please enter the 6-digit code.");
+  //     return;
+  //   }
+  //   try {
+  //     setVerifying(true);
+  //     const res = await verifySellerOtp({ email, phone, code });
+  //     if (res.success) {
+  //       // persist and go to seller dashboard
+  //       await setSession(res.data.user, res.data.user.token);
+  //       router.replace("/(seller)");
+  //     } else {
+  //       Alert.alert("Verification failed", res.error || "Please try again");
+  //     }
+  //   } catch (e: any) {
+  //     Alert.alert("Error", e?.message ?? "Something went wrong");
+  //   } finally {
+  //     setVerifying(false);
+  //   }
+  // };
+
   const onVerify = async () => {
-    if (code.length !== 6) {
-      Alert.alert("Invalid code", "Please enter the 6-digit code.");
-      return;
+  if (code.length !== 6) { /* ... */ }
+  try {
+    setVerifying(true);
+    const res = await verifySellerOtp({ email, phone, code });
+    if (res.success) {
+      // ❌ remove this (there is no token in response)
+      // await setSession(res.data.user, res.data.user.token);
+      // router.replace("/(seller)");
+
+      // ✅ go to login instead
+      router.replace("/(auth)/login");
+    } else {
+      Alert.alert("Verification failed", res.error || "Please try again");
     }
-    try {
-      setVerifying(true);
-      const res = await verifySellerOtp({ email, phone, code });
-      if (res.success) {
-        // persist and go to seller dashboard
-        await setSession(res.data.user, res.data.user.token);
-        router.replace("/(seller)");
-      } else {
-        Alert.alert("Verification failed", res.error || "Please try again");
-      }
-    } catch (e: any) {
-      Alert.alert("Error", e?.message ?? "Something went wrong");
-    } finally {
-      setVerifying(false);
-    }
-  };
+  } catch (e: any) {
+    Alert.alert("Error", e?.message ?? "Something went wrong");
+  } finally {
+    setVerifying(false);
+  }
+};
+
 
   const onResend = async () => {
     if (seconds > 0) return;

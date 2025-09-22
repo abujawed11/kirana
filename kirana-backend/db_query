@@ -2,6 +2,15 @@ CREATE DATABASE IF NOT EXISTS kirana_db;
 
 USE kirana_db;
 
+CREATE USER 'kirana_user'@'localhost' IDENTIFIED BY 'kirana@25';
+GRANT ALL PRIVILEGES ON kirana_db.* TO 'kirana_user'@'localhost';
+FLUSH PRIVILEGES;
+
+
+CREATE USER 'kirana_user'@'%' IDENTIFIED BY 'kirana@25';
+GRANT ALL PRIVILEGES ON kirana_db.* TO 'kirana_user'@'%';
+FLUSH PRIVILEGES;
+
 
 CREATE TABLE IF NOT EXISTS users (
   user_id VARCHAR(10) NOT NULL,                      -- e.g. USR0001
@@ -44,4 +53,17 @@ CREATE TABLE IF NOT EXISTS otp_codes (
   KEY idx_otp_phone (phone),
   KEY idx_otp_email (email),
   KEY idx_otp_expiry (expires_at)
-)
+);
+
+
+
+ALTER TABLE otp_codes
+  ADD COLUMN payload_json JSON NULL AFTER channel;
+  
+  
+  
+  
+CREATE TABLE IF NOT EXISTS user_sequence (
+  seq INT NOT NULL AUTO_INCREMENT,
+  PRIMARY KEY (seq)
+) ENGINE=InnoDB;

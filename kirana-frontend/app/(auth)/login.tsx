@@ -1,130 +1,5 @@
-// // app/(auth)/login.tsx
-// import React, { useMemo, useState } from "react";
-// import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, ScrollView, Alert } from "react-native";
-// import { useRouter } from "expo-router";
-// import { loginSeller } from "@/features/auth/api";
-
-// type Errors = Partial<Record<"phoneOrEmail" | "password", string>>;
-
-// function validate(values: { phoneOrEmail: string; password: string }): Errors {
-//   const e: Errors = {};
-//   const v = values.phoneOrEmail.trim();
-//   if (!v) {
-//     e.phoneOrEmail = "Enter phone or email";
-//   } else {
-//     const asDigits = v.replace(/\D/g, "");
-//     const looksEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
-//     if (!looksEmail && asDigits.length !== 10) {
-//       e.phoneOrEmail = "Enter valid email or 10-digit phone";
-//     }
-//   }
-//   if (!values.password) e.password = "Enter password";
-//   return e;
-// }
-
-// export default function SellerLogin() {
-//   const router = useRouter();
-//   const [form, setForm] = useState({ phoneOrEmail: "", password: "" });
-//   const [showPwd, setShowPwd] = useState(false);
-//   const [submitting, setSubmitting] = useState(false);
-//   const [errors, setErrors] = useState<Errors>({});
-
-//   const isValid = useMemo(() => Object.keys(validate(form)).length === 0, [form]);
-//   const update = (key: keyof typeof form) => (t: string) => setForm((s) => ({ ...s, [key]: t }));
-
-//   const onSubmit = async () => {
-//     const e = validate(form);
-//     setErrors(e);
-//     if (Object.keys(e).length) return;
-
-//     try {
-//       setSubmitting(true);
-//       const res = await loginSeller({
-//         phoneOrEmail: form.phoneOrEmail.trim(),
-//         password: form.password,
-//       });
-
-//       if (res.success) {
-//         // Persist token/user as needed, then take seller to dashboard:
-//         router.replace("/(seller)");
-//       } else {
-//         Alert.alert("Login failed", res.error || "Please try again");
-//       }
-//     } catch (err: any) {
-//       Alert.alert("Error", err?.message ?? "Something went wrong");
-//     } finally {
-//       setSubmitting(false);
-//     }
-//   };
-
-//   return (
-//     <KeyboardAvoidingView behavior={Platform.select({ ios: "padding", android: undefined })} className="flex-1 bg-white">
-//       <ScrollView contentContainerStyle={{ padding: 20 }}>
-//         <View className="mt-6 mb-8">
-//           <Text className="text-3xl font-extrabold text-emerald-700">Welcome back</Text>
-//           <Text className="text-neutral-600 mt-2">Log in to manage your store.</Text>
-//         </View>
-
-//         {/* Phone/Email */}
-//         <View className="mb-4">
-//           <Text className="text-neutral-700 mb-2 font-semibold">Phone or Email</Text>
-//           <View className="rounded-2xl border border-neutral-300 bg-white px-3">
-//             <TextInput
-//               className="py-3 text-base"
-//               value={form.phoneOrEmail}
-//               onChangeText={update("phoneOrEmail")}
-//               placeholder="e.g. 9876543210 or you@store.com"
-//               autoCapitalize="none"
-//               keyboardType="default"
-//             />
-//           </View>
-//           {errors.phoneOrEmail ? <Text className="text-red-600 mt-1 text-sm">{errors.phoneOrEmail}</Text> : null}
-//         </View>
-
-//         {/* Password */}
-//         <View className="mb-2">
-//           <Text className="text-neutral-700 mb-2 font-semibold">Password</Text>
-//           <View className="flex-row items-center rounded-2xl border border-neutral-300 bg-white px-3">
-//             <TextInput
-//               className="flex-1 py-3 text-base"
-//               value={form.password}
-//               onChangeText={update("password")}
-//               placeholder="Your password"
-//               secureTextEntry={!showPwd}
-//               autoCapitalize="none"
-//             />
-//             <TouchableOpacity className="px-2 py-2" onPress={() => setShowPwd((s) => !s)}>
-//               <Text className="text-emerald-700 font-semibold">{showPwd ? "Hide" : "Show"}</Text>
-//             </TouchableOpacity>
-//           </View>
-//           {errors.password ? <Text className="text-red-600 mt-1 text-sm">{errors.password}</Text> : null}
-//         </View>
-
-//         {/* Submit */}
-//         <TouchableOpacity
-//           disabled={!isValid || submitting}
-//           onPress={onSubmit}
-//           className={`mt-3 rounded-2xl py-4 items-center ${!isValid || submitting ? "bg-emerald-300" : "bg-emerald-600"}`}
-//         >
-//           {submitting ? <ActivityIndicator /> : <Text className="text-white font-bold text-base">Log in</Text>}
-//         </TouchableOpacity>
-
-//         {/* Link to Signup */}
-//         <View className="mt-4 flex-row justify-center">
-//           <Text className="text-neutral-700">New to Kirana? </Text>
-//           <TouchableOpacity onPress={() => router.push("/(auth)/signup")}>
-//             <Text className="text-emerald-700 font-semibold">Create an account</Text>
-//           </TouchableOpacity>
-//         </View>
-//       </ScrollView>
-//     </KeyboardAvoidingView>
-//   );
-// }
-
-
-
 // app/(auth)/login.tsx
-import React, { useMemo, useState, useCallback } from "react";
+import React, { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -134,18 +9,22 @@ import {
   Platform,
   ActivityIndicator,
   ScrollView,
-  Alert,
   Dimensions,
   StatusBar,
+  Keyboard,
+  BackHandler,
+  Alert,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import { loginSeller } from "@/features/auth/api";
-import { MotiView } from "moti";
+import { MotiView, MotiText, AnimatePresence } from "moti";
 import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
+import * as LocalAuthentication from "expo-local-authentication";
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
-// Enhanced validation with better error messages
+// Enhanced validation with security checks
 type ValidationErrors = {
   phoneOrEmail?: string;
   password?: string;
@@ -157,6 +36,7 @@ type FormData = {
   password: string;
 };
 
+// Advanced validation with security best practices
 const validateForm = (values: FormData): ValidationErrors => {
   const errors: ValidationErrors = {};
   const identifier = values.phoneOrEmail.trim();
@@ -166,8 +46,8 @@ const validateForm = (values: FormData): ValidationErrors => {
     return errors;
   }
 
-  // Enhanced email validation
-  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  // Enhanced email validation (RFC 5322 compliant)
+  const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
   const phoneRegex = /^[6-9]\d{9}$/; // Indian phone number format
   const cleanedPhone = identifier.replace(/\D/g, "");
 
@@ -175,22 +55,27 @@ const validateForm = (values: FormData): ValidationErrors => {
   const isValidPhone = phoneRegex.test(cleanedPhone);
 
   if (!isValidEmail && !isValidPhone) {
-    errors.phoneOrEmail = "Please enter a valid email or 10-digit phone number";
+    errors.phoneOrEmail = "Please enter a valid email or Indian mobile number";
+  } else if (identifier.length > 254) {
+    errors.phoneOrEmail = "Input is too long";
   }
 
+  // Enhanced password validation
   if (!values.password) {
     errors.password = "Password is required";
   } else if (values.password.length < 6) {
     errors.password = "Password must be at least 6 characters";
+  } else if (values.password.length > 128) {
+    errors.password = "Password cannot exceed 128 characters";
   }
 
   return errors;
 };
 
-// Professional animated text component
+// Animated text with better performance
 const AnimatedText = React.memo(({
   text,
-  delay = 30,
+  delay = 25,
   style,
   containerStyle,
 }: {
@@ -204,12 +89,13 @@ const AnimatedText = React.memo(({
       {text.split("").map((char, index) => (
         <MotiView
           key={`${char}-${index}`}
-          from={{ opacity: 0, translateY: 15 }}
-          animate={{ opacity: 1, translateY: 0 }}
+          from={{ opacity: 0, translateY: 12, scale: 0.8 }}
+          animate={{ opacity: 1, translateY: 0, scale: 1 }}
           transition={{
             delay: index * delay,
-            type: "timing",
-            duration: 400,
+            type: "spring",
+            damping: 15,
+            stiffness: 100,
           }}
         >
           <Text style={style}>{char === " " ? "\u00A0" : char}</Text>
@@ -219,7 +105,7 @@ const AnimatedText = React.memo(({
   );
 });
 
-// Custom input component with better UX
+// Enhanced form input with accessibility and better UX
 const FormInput = React.memo(({
   label,
   value,
@@ -231,6 +117,13 @@ const FormInput = React.memo(({
   autoCapitalize = "none",
   rightElement,
   testID,
+  accessibilityLabel,
+  accessibilityHint,
+  maxLength,
+  onSubmitEditing,
+  returnKeyType = "next",
+  blurOnSubmit = false,
+  inputRef,
 }: {
   label: string;
   value: string;
@@ -242,8 +135,24 @@ const FormInput = React.memo(({
   autoCapitalize?: "none" | "sentences" | "words" | "characters";
   rightElement?: React.ReactNode;
   testID?: string;
+  accessibilityLabel?: string;
+  accessibilityHint?: string;
+  maxLength?: number;
+  onSubmitEditing?: () => void;
+  returnKeyType?: "done" | "go" | "next" | "search" | "send";
+  blurOnSubmit?: boolean;
+  inputRef?: React.RefObject<TextInput | null>;
 }) => {
   const [isFocused, setIsFocused] = useState(false);
+
+  const handleFocus = useCallback(() => {
+    setIsFocused(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }, []);
+
+  const handleBlur = useCallback(() => {
+    setIsFocused(false);
+  }, []);
 
   return (
     <View style={{ marginBottom: 20 }}>
@@ -254,19 +163,37 @@ const FormInput = React.memo(({
         marginBottom: 8,
       }}>
         {label}
+        {maxLength && value && (
+          <Text style={{ color: "#9CA3AF", fontWeight: "400" }}>
+            {` (${value.length}/${maxLength})`}
+          </Text>
+        )}
       </Text>
-      <View style={{
-        borderRadius: 12,
-        borderWidth: 1.5,
-        borderColor: error ? "#EF4444" : isFocused ? "#10B981" : "#D1D5DB",
-        backgroundColor: "#FFFFFF",
-        flexDirection: "row",
-        alignItems: "center",
-        paddingHorizontal: 16,
-        minHeight: 52,
-      }}>
+      <MotiView
+        animate={{
+          borderColor: error ? "#EF4444" : isFocused ? "#10B981" : "#D1D5DB",
+          shadowOpacity: isFocused ? 0.1 : 0,
+          shadowRadius: isFocused ? 8 : 0,
+        }}
+        transition={{ type: "timing", duration: 200 }}
+        style={{
+          borderRadius: 12,
+          borderWidth: 1.5,
+          backgroundColor: "#FFFFFF",
+          flexDirection: "row",
+          alignItems: "center",
+          paddingHorizontal: 16,
+          minHeight: 52,
+          shadowColor: "#10B981",
+          shadowOffset: { width: 0, height: 2 },
+          elevation: isFocused ? 3 : 0,
+        }}
+      >
         <TextInput
+          ref={inputRef}
           testID={testID}
+          accessibilityLabel={accessibilityLabel}
+          accessibilityHint={accessibilityHint}
           style={{
             flex: 1,
             fontSize: 16,
@@ -280,29 +207,187 @@ const FormInput = React.memo(({
           secureTextEntry={secureTextEntry}
           keyboardType={keyboardType}
           autoCapitalize={autoCapitalize}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
           autoCorrect={false}
           spellCheck={false}
+          maxLength={maxLength}
+          onSubmitEditing={onSubmitEditing}
+          returnKeyType={returnKeyType}
+          blurOnSubmit={blurOnSubmit}
+          enablesReturnKeyAutomatically
         />
         {rightElement}
-      </View>
-      {error && (
+      </MotiView>
+      <AnimatePresence>
+        {error && (
+          <MotiView
+            key={error}
+            from={{ opacity: 0, translateY: -5, scale: 0.95 }}
+            animate={{ opacity: 1, translateY: 0, scale: 1 }}
+            exit={{ opacity: 0, translateY: -5, scale: 0.95 }}
+            transition={{ type: "spring", damping: 15, stiffness: 200 }}
+            style={{ 
+              marginTop: 6,
+              flexDirection: "row",
+              alignItems: "center",
+            }}
+          >
+            <Ionicons name="alert-circle" size={14} color="#EF4444" />
+            <Text style={{
+              color: "#EF4444",
+              fontSize: 13,
+              fontWeight: "500",
+              marginLeft: 4,
+              flex: 1,
+            }}>
+              {error}
+            </Text>
+          </MotiView>
+        )}
+      </AnimatePresence>
+    </View>
+  );
+});
+
+// Loading overlay component
+const LoadingOverlay = React.memo(({ visible }: { visible: boolean }) => (
+  <AnimatePresence>
+    {visible && (
+      <MotiView
+        from={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: "rgba(0, 0, 0, 0.3)",
+          justifyContent: "center",
+          alignItems: "center",
+          zIndex: 1000,
+        }}
+      >
         <MotiView
-          from={{ opacity: 0, translateY: -5 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          style={{ marginTop: 6 }}
+          from={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: "spring", damping: 15 }}
+          style={{
+            backgroundColor: "#FFFFFF",
+            borderRadius: 16,
+            padding: 24,
+            alignItems: "center",
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 8 },
+            shadowOpacity: 0.15,
+            shadowRadius: 20,
+            elevation: 10,
+          }}
         >
+          <ActivityIndicator size="large" color="#10B981" />
           <Text style={{
-            color: "#EF4444",
-            fontSize: 13,
-            fontWeight: "500",
+            marginTop: 12,
+            fontSize: 16,
+            fontWeight: "600",
+            color: "#374151",
           }}>
-            {error}
+            Signing you in...
           </Text>
         </MotiView>
-      )}
-    </View>
+      </MotiView>
+    )}
+  </AnimatePresence>
+));
+
+// Biometric authentication component
+const BiometricAuth = React.memo(({ 
+  onBiometricLogin, 
+  biometricType 
+}: { 
+  onBiometricLogin: () => void;
+  biometricType: string;
+}) => {
+  const getBiometricIcon = () => {
+    switch (biometricType) {
+      case 'face':
+        return "scan-outline";
+      case 'fingerprint':
+        return "finger-print-outline";
+      case 'iris':
+        return "eye-outline";
+      default:
+        return "finger-print-outline";
+    }
+  };
+
+  const getBiometricText = () => {
+    switch (biometricType) {
+      case 'face':
+        return "Use Face ID";
+      case 'fingerprint':
+        return "Use Fingerprint";
+      case 'iris':
+        return "Use Iris Scan";
+      default:
+        return "Use Biometric Login";
+    }
+  };
+
+  return (
+    <MotiView
+      from={{ opacity: 0, scale: 0.8, translateY: 20 }}
+      animate={{ opacity: 1, scale: 1, translateY: 0 }}
+      transition={{ delay: 1000, type: "spring", damping: 15 }}
+      style={{ alignItems: "center", marginVertical: 20 }}
+    >
+      <Text style={{
+        fontSize: 14,
+        color: "#6B7280",
+        marginBottom: 12,
+        fontWeight: "500",
+      }}>
+        Or sign in with biometrics
+      </Text>
+      
+      <TouchableOpacity
+        onPress={onBiometricLogin}
+        style={{
+          width: 64,
+          height: 64,
+          borderRadius: 32,
+          backgroundColor: "#F3F4F6",
+          justifyContent: "center",
+          alignItems: "center",
+          borderWidth: 2,
+          borderColor: "#E5E7EB",
+          shadowColor: "#10B981",
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.1,
+          shadowRadius: 8,
+          elevation: 3,
+        }}
+        accessibilityLabel={getBiometricText()}
+        accessibilityHint="Authenticate using your device biometrics"
+        activeOpacity={0.7}
+      >
+        <Ionicons 
+          name={getBiometricIcon() as any} 
+          size={28} 
+          color="#10B981" 
+        />
+      </TouchableOpacity>
+      
+      <Text style={{
+        fontSize: 12,
+        color: "#9CA3AF",
+        marginTop: 8,
+        textAlign: "center",
+      }}>
+        {getBiometricText()}
+      </Text>
+    </MotiView>
   );
 });
 
@@ -314,18 +399,99 @@ export default function SellerLogin() {
     phoneOrEmail: "",
     password: "",
   });
+  
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<ValidationErrors>({});
+  const [submitAttempts, setSubmitAttempts] = useState(0);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [biometricType, setBiometricType] = useState<string>("fingerprint");
+  
+  // Refs for input focus management
+  const phoneEmailInputRef = useRef<TextInput>(null);
+  const passwordInputRef = useRef<TextInput>(null);
   
   const isFormValid = useMemo(
     () => Object.keys(validateForm(formData)).length === 0,
     [formData]
   );
 
+  // Keyboard listeners
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener("keyboardDidShow", () => {
+      setKeyboardVisible(true);
+    });
+    const keyboardDidHideListener = Keyboard.addListener("keyboardDidHide", () => {
+      setKeyboardVisible(false);
+    });
+
+    return () => {
+      keyboardDidShowListener?.remove();
+      keyboardDidHideListener?.remove();
+    };
+  }, []);
+
+  // Check biometric availability
+  useEffect(() => {
+    const checkBiometricAvailability = async () => {
+      try {
+        const hasHardware = await LocalAuthentication.hasHardwareAsync();
+        const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+        const supportedTypes = await LocalAuthentication.supportedAuthenticationTypesAsync();
+        
+        if (hasHardware && isEnrolled && supportedTypes.length > 0) {
+          setBiometricAvailable(true);
+          
+          // Determine primary biometric type
+          if (supportedTypes.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION)) {
+            setBiometricType("face");
+          } else if (supportedTypes.includes(LocalAuthentication.AuthenticationType.FINGERPRINT)) {
+            setBiometricType("fingerprint");
+          } else if (supportedTypes.includes(LocalAuthentication.AuthenticationType.IRIS)) {
+            setBiometricType("iris");
+          } else {
+            setBiometricType("fingerprint"); // fallback
+          }
+        } else {
+          setBiometricAvailable(false);
+        }
+      } catch (error) {
+        console.log("Biometric check failed:", error);
+        setBiometricAvailable(false);
+      }
+    };
+
+    checkBiometricAvailability();
+  }, []);
+
+  // Handle back button on Android
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        if (isSubmitting) {
+          return true; // Prevent going back while submitting
+        }
+        return false;
+      };
+
+      const backHandler = BackHandler.addEventListener("hardwareBackPress", onBackPress);
+      return () => backHandler.remove();
+    }, [isSubmitting])
+  );
+
   const updateField = useCallback(
     (field: keyof FormData) => (value: string) => {
-      setFormData(prev => ({ ...prev, [field]: value }));
+      let processedValue = value;
+      
+      // Field-specific processing
+      if (field === "phoneOrEmail") {
+        // Remove extra spaces and limit length
+        processedValue = value.trim().slice(0, 254);
+      }
+      
+      setFormData(prev => ({ ...prev, [field]: processedValue }));
+      
       // Clear field error when user starts typing
       if (errors[field]) {
         setErrors(prev => ({ ...prev, [field]: undefined }));
@@ -334,16 +500,34 @@ export default function SellerLogin() {
     [errors]
   );
 
+  // Enhanced input navigation
+  const focusNextInput = useCallback((nextInputRef: React.RefObject<TextInput | null>) => {
+    setTimeout(() => nextInputRef.current?.focus(), 100);
+  }, []);
+
   const handleSubmit = useCallback(async () => {
     try {
+      setSubmitAttempts(prev => prev + 1);
+      
+      // Rate limiting protection
+      if (submitAttempts >= 5) {
+        setErrors({
+          general: "Too many login attempts. Please wait a moment before trying again.",
+        });
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        return;
+      }
+      
       const validationErrors = validateForm(formData);
       setErrors(validationErrors);
       
       if (Object.keys(validationErrors).length > 0) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         return;
       }
 
       setIsSubmitting(true);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       
       const response = await loginSeller({
         phoneOrEmail: formData.phoneOrEmail.trim(),
@@ -351,35 +535,105 @@ export default function SellerLogin() {
       });
 
       if (response.success) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        
         // Clear form on success
         setFormData({ phoneOrEmail: "", password: "" });
+        setSubmitAttempts(0);
+        
+        // Navigate to seller dashboard
         router.replace("/(seller)");
       } else {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         setErrors({
           general: response.error || "Login failed. Please check your credentials and try again.",
         });
       }
     } catch (error: any) {
       console.error("Login error:", error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      
       setErrors({
         general: error?.message || "Network error. Please check your connection and try again.",
       });
     } finally {
       setIsSubmitting(false);
     }
-  }, [formData, router]);
+  }, [formData, router, submitAttempts]);
+
+  const handleBiometricLogin = useCallback(async () => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      
+      const biometricResult = await LocalAuthentication.authenticateAsync({
+        promptMessage: "Sign in with biometrics",
+        subTitle: "Use your biometric credential to access your account",
+        cancelLabel: "Cancel",
+        disableDeviceFallback: false,
+        fallbackLabel: "Use Password",
+      });
+
+      if (biometricResult.success) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        
+        // In a real app, you'd retrieve stored credentials or make an API call
+        // with a biometric token. For demo purposes, we'll simulate success:
+        Alert.alert(
+          "Biometric Login Success", 
+          "In a real app, this would log you in with stored biometric credentials.",
+          [
+            {
+              text: "Continue to Dashboard",
+              onPress: () => router.replace("/(seller)")
+            },
+            {
+              text: "Stay Here",
+              style: "cancel"
+            }
+          ]
+        );
+      } else if (biometricResult.error === "UserCancel") {
+        // User cancelled, do nothing
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      } else if (biometricResult.error === "UserFallback") {
+        // User chose to use password instead
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        phoneEmailInputRef.current?.focus();
+      } else {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        Alert.alert(
+          "Biometric Authentication Failed",
+          "Please try again or use your password to sign in."
+        );
+      }
+    } catch (error: any) {
+      console.error("Biometric authentication error:", error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(
+        "Biometric Error",
+        "Biometric authentication is not available. Please use your password."
+      );
+    }
+  }, [router]);
 
   const togglePasswordVisibility = useCallback(() => {
     setShowPassword(prev => !prev);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   }, []);
 
   const navigateToSignup = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push("/(auth)/signup");
+  }, [router]);
+
+  const navigateToForgotPassword = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push("/(auth)/forgot-password");
   }, [router]);
 
   return (
     <>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" translucent />
       <KeyboardAvoidingView
         behavior={Platform.select({ ios: "padding", android: "height" })}
         style={{ flex: 1, backgroundColor: "#FFFFFF" }}
@@ -388,35 +642,49 @@ export default function SellerLogin() {
           contentContainerStyle={{
             flexGrow: 1,
             paddingHorizontal: 24,
-            paddingTop: Platform.OS === "ios" ? 60 : 40,
-            paddingBottom: 40,
+            paddingTop: Platform.OS === "ios" ? 60 : 50,
+            paddingBottom: keyboardVisible ? 20 : 40,
           }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
+          bounces={false}
         >
           {/* Header Section */}
           <MotiView
-            from={{ opacity: 0, translateY: 30 }}
+            from={{ opacity: 0, translateY: 40 }}
             animate={{ opacity: 1, translateY: 0 }}
-            transition={{ delay: 100 }}
-            style={{ marginBottom: 40, alignItems: "center" }}
+            transition={{ delay: 100, type: "spring", damping: 15 }}
+            style={{ 
+              marginBottom: keyboardVisible ? 20 : 40, 
+              alignItems: "center" 
+            }}
           >
             {/* Logo/Brand */}
-            <View style={{
-              width: 80,
-              height: 80,
-              borderRadius: 20,
-              backgroundColor: "#10B981",
-              justifyContent: "center",
-              alignItems: "center",
-              marginBottom: 24,
-            }}>
+            <MotiView
+              from={{ scale: 0, rotate: "180deg" }}
+              animate={{ scale: 1, rotate: "0deg" }}
+              transition={{ delay: 200, type: "spring", damping: 12 }}
+              style={{
+                width: 80,
+                height: 80,
+                borderRadius: 20,
+                backgroundColor: "#10B981",
+                justifyContent: "center",
+                alignItems: "center",
+                marginBottom: 24,
+                shadowColor: "#10B981",
+                shadowOffset: { width: 0, height: 8 },
+                shadowOpacity: 0.3,
+                shadowRadius: 16,
+                elevation: 8,
+              }}
+            >
               <Ionicons name="storefront-outline" size={40} color="#FFFFFF" />
-            </View>
+            </MotiView>
 
             <AnimatedText
               text="Welcome Back"
-              delay={40}
+              delay={30}
               style={{
                 fontSize: 32,
                 fontWeight: "800",
@@ -424,70 +692,93 @@ export default function SellerLogin() {
                 textAlign: "center",
               }}
             />
-            <Text style={{
-              fontSize: 16,
-              color: "#6B7280",
-              textAlign: "center",
-              marginTop: 8,
-              lineHeight: 24,
-            }}>
+            
+            <MotiText
+              from={{ opacity: 0, translateY: 10 }}
+              animate={{ opacity: 1, translateY: 0 }}
+              transition={{ delay: 800 }}
+              style={{
+                fontSize: 16,
+                color: "#6B7280",
+                textAlign: "center",
+                marginTop: 8,
+                lineHeight: 24,
+              }}
+            >
               Sign in to continue managing your store
-            </Text>
+            </MotiText>
           </MotiView>
 
           {/* Form Section */}
           <MotiView
-            from={{ opacity: 0, translateY: 20 }}
+            from={{ opacity: 0, translateY: 30 }}
             animate={{ opacity: 1, translateY: 0 }}
-            transition={{ delay: 200 }}
+            transition={{ delay: 300, type: "spring", damping: 15 }}
           >
             {/* General Error Message */}
-            {errors.general && (
-              <MotiView
-                from={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                style={{
-                  backgroundColor: "#FEF2F2",
-                  borderColor: "#FECACA",
-                  borderWidth: 1,
-                  borderRadius: 12,
-                  padding: 16,
-                  marginBottom: 20,
-                  flexDirection: "row",
-                  alignItems: "center",
-                }}
-              >
-                <Ionicons name="alert-circle" size={20} color="#EF4444" />
-                <Text style={{
-                  color: "#DC2626",
-                  fontSize: 14,
-                  fontWeight: "500",
-                  marginLeft: 8,
-                  flex: 1,
-                }}>
-                  {errors.general}
-                </Text>
-              </MotiView>
-            )}
+            <AnimatePresence>
+              {errors.general && (
+                <MotiView
+                  key={errors.general}
+                  from={{ opacity: 0, scale: 0.9, translateY: -10 }}
+                  animate={{ opacity: 1, scale: 1, translateY: 0 }}
+                  exit={{ opacity: 0, scale: 0.9, translateY: -10 }}
+                  transition={{ type: "spring", damping: 15 }}
+                  style={{
+                    backgroundColor: "#FEF2F2",
+                    borderColor: "#FECACA",
+                    borderWidth: 1,
+                    borderRadius: 12,
+                    padding: 16,
+                    marginBottom: 20,
+                    flexDirection: "row",
+                    alignItems: "center",
+                  }}
+                >
+                  <Ionicons name="alert-circle" size={20} color="#EF4444" />
+                  <Text style={{
+                    color: "#DC2626",
+                    fontSize: 14,
+                    fontWeight: "500",
+                    marginLeft: 8,
+                    flex: 1,
+                  }}>
+                    {errors.general}
+                  </Text>
+                </MotiView>
+              )}
+            </AnimatePresence>
 
             <FormInput
               testID="phone-email-input"
+              inputRef={phoneEmailInputRef}
               label="Phone Number or Email"
               value={formData.phoneOrEmail}
               onChangeText={updateField("phoneOrEmail")}
               placeholder="Enter your phone or email"
               keyboardType="email-address"
               error={errors.phoneOrEmail}
+              accessibilityLabel="Phone or Email Input"
+              accessibilityHint="Enter your registered phone number or email address"
+              maxLength={254}
+              onSubmitEditing={() => focusNextInput(passwordInputRef)}
             />
 
             <FormInput
               testID="password-input"
+              inputRef={passwordInputRef}
               label="Password"
               value={formData.password}
               onChangeText={updateField("password")}
               placeholder="Enter your password"
               secureTextEntry={!showPassword}
               error={errors.password}
+              accessibilityLabel="Password Input"
+              accessibilityHint="Enter your account password"
+              maxLength={128}
+              returnKeyType="done"
+              onSubmitEditing={handleSubmit}
+              blurOnSubmit
               rightElement={
                 <TouchableOpacity
                   onPress={togglePasswordVisibility}
@@ -496,6 +787,7 @@ export default function SellerLogin() {
                     marginLeft: 8,
                   }}
                   testID="toggle-password"
+                  accessibilityLabel={showPassword ? "Hide Password" : "Show Password"}
                 >
                   <Ionicons
                     name={showPassword ? "eye-off-outline" : "eye-outline"}
@@ -507,24 +799,35 @@ export default function SellerLogin() {
             />
 
             {/* Submit Button */}
-            <TouchableOpacity
-              testID="login-button"
-              disabled={!isFormValid || isSubmitting}
-              onPress={handleSubmit}
-              style={{
-                backgroundColor: (!isFormValid || isSubmitting) ? "#D1FAE5" : "#10B981",
-                borderRadius: 12,
-                height: 52,
-                justifyContent: "center",
-                alignItems: "center",
-                marginTop: 8,
-                marginBottom: 24,
+            <MotiView
+              animate={{
+                scale: isFormValid ? 1 : 0.98,
+                opacity: isFormValid ? 1 : 0.7,
               }}
-              activeOpacity={0.8}
+              transition={{ type: "timing", duration: 200 }}
             >
-              {isSubmitting ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
+              <TouchableOpacity
+                testID="login-button"
+                disabled={!isFormValid || isSubmitting}
+                onPress={handleSubmit}
+                style={{
+                  backgroundColor: (!isFormValid || isSubmitting) ? "#D1FAE5" : "#10B981",
+                  borderRadius: 12,
+                  height: 52,
+                  justifyContent: "center",
+                  alignItems: "center",
+                  marginTop: 8,
+                  marginBottom: 24,
+                  shadowColor: isFormValid ? "#10B981" : "transparent",
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 8,
+                  elevation: isFormValid ? 4 : 0,
+                }}
+                activeOpacity={0.8}
+                accessibilityLabel="Sign In Button"
+                accessibilityHint="Submit the form to sign into your account"
+              >
                 <Text style={{
                   color: "#FFFFFF",
                   fontSize: 16,
@@ -532,13 +835,23 @@ export default function SellerLogin() {
                 }}>
                   Sign In
                 </Text>
-              )}
-            </TouchableOpacity>
+              </TouchableOpacity>
+            </MotiView>
+
+            {/* Biometric Login Option */}
+            {biometricAvailable && !keyboardVisible && (
+              <BiometricAuth 
+                onBiometricLogin={handleBiometricLogin}
+                biometricType={biometricType}
+              />
+            )}
 
             {/* Forgot Password Link */}
             <TouchableOpacity
               style={{ alignSelf: "center", marginBottom: 24 }}
-              onPress={() => router.push("/(auth)/forgot-password")}
+              onPress={navigateToForgotPassword}
+              accessibilityLabel="Forgot Password Link"
+              accessibilityHint="Navigate to password recovery"
             >
               <Text style={{
                 color: "#10B981",
@@ -561,7 +874,11 @@ export default function SellerLogin() {
               }}>
                 New to our platform? 
               </Text>
-              <TouchableOpacity onPress={navigateToSignup}>
+              <TouchableOpacity 
+                onPress={navigateToSignup}
+                accessibilityLabel="Create Account Link"
+                accessibilityHint="Navigate to account creation page"
+              >
                 <Text style={{
                   color: "#10B981",
                   fontSize: 14,
@@ -574,6 +891,9 @@ export default function SellerLogin() {
             </View>
           </MotiView>
         </ScrollView>
+        
+        {/* Loading Overlay */}
+        <LoadingOverlay visible={isSubmitting} />
       </KeyboardAvoidingView>
     </>
   );
