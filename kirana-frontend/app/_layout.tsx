@@ -22,6 +22,7 @@ import * as NavigationBar from "expo-navigation-bar";
 import { QueryClient, QueryClientProvider, DefaultError } from "@tanstack/react-query";
 
 import { AuthProvider } from "@/context/AuthContext";
+import { KycProvider } from "@/context/KYCContext";
 
 // Foreground Notification Handler
 Notifications.setNotificationHandler({
@@ -130,9 +131,9 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-
-          <Slot />
-
+          <KycProvider>
+            <Slot />
+          </KycProvider>
         </AuthProvider>
       </QueryClientProvider>
     </GestureHandlerRootView>

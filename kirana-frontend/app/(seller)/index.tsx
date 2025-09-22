@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
+import { useKyc } from "@/context/KYCContext";
 
 const Card = ({ title, value, icon, onPress, color = "#10B981" }: {
   title: string;
@@ -49,6 +50,7 @@ const Card = ({ title, value, icon, onPress, color = "#10B981" }: {
 export default function SellerDashboard() {
   const router = useRouter();
   const { user, logout } = useAuth();
+  const { needsKyc, blockingReason, kycStatus } = useKyc();
 
   return (
     <View style={{ flex: 1, backgroundColor: "#F8FAFC" }}>
@@ -93,6 +95,64 @@ export default function SellerDashboard() {
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 20, gap: 18 }}>
+        {/* KYC Alert */}
+        {needsKyc && (
+          <TouchableOpacity
+            onPress={() => router.push("/(seller)/kyc")}
+            style={{
+              backgroundColor: kycStatus?.status === 'rejected' ? "#FEF2F2" : "#FEF3C7",
+              borderLeftWidth: 4,
+              borderLeftColor: kycStatus?.status === 'rejected' ? "#EF4444" : "#F59E0B",
+              borderRadius: 12,
+              padding: 16,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 12,
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.1,
+              shadowRadius: 4,
+              elevation: 3,
+            }}
+          >
+            <View
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                backgroundColor: kycStatus?.status === 'rejected' ? "#FEE2E2" : "#FEF3C7",
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
+              <Ionicons
+                name={kycStatus?.status === 'rejected' ? "close-circle" : kycStatus?.status === 'pending' ? "time" : "shield-checkmark"}
+                size={24}
+                color={kycStatus?.status === 'rejected' ? "#EF4444" : "#F59E0B"}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{
+                fontSize: 16,
+                fontWeight: "700",
+                color: kycStatus?.status === 'rejected' ? "#DC2626" : "#92400E",
+                marginBottom: 4
+              }}>
+                {kycStatus?.status === 'rejected' ? 'KYC Verification Failed' :
+                 kycStatus?.status === 'pending' ? 'KYC Under Review' : 'Complete KYC Verification'}
+              </Text>
+              <Text style={{
+                fontSize: 14,
+                color: kycStatus?.status === 'rejected' ? "#991B1B" : "#78350F",
+                lineHeight: 20
+              }}>
+                {blockingReason}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={kycStatus?.status === 'rejected' ? "#DC2626" : "#92400E"} />
+          </TouchableOpacity>
+        )}
+
         {/* KPI Row */}
         <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
           <Card
@@ -117,14 +177,14 @@ export default function SellerDashboard() {
             value="3"
             icon="time-outline"
             color="#3B82F6"
-            onPress={() => router.push("/(seller)/orders?filter=pending")}
+            onPress={() => router.push("/(seller)/orders?filter=pending" as any)}
           />
           <Card
             title="Low Stock"
             value="5"
             icon="alert-circle-outline"
             color="#EF4444"
-            onPress={() => router.push("/(seller)/inventory?filter=low")}
+            onPress={() => router.push("/(seller)/inventory?filter=low" as any)}
           />
         </View>
 
@@ -206,6 +266,59 @@ export default function SellerDashboard() {
             <Text style={{ color: "#374151" }}>
               <Text style={{ fontWeight: "700" }}>Role:</Text> {user?.role ?? "-"}
             </Text>
+            <View style={{ flexDirection: "row", alignItems: "center", marginTop: 8 }}>
+              <Text style={{ color: "#374151", fontWeight: "700" }}>KYC Status:</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", marginLeft: 8 }}>
+                <Ionicons
+                  name={kycStatus?.status === 'verified' ? "checkmark-circle" :
+                        kycStatus?.status === 'pending' ? "time" :
+                        kycStatus?.status === 'rejected' ? "close-circle" : "shield-outline"}
+                  size={16}
+                  color={kycStatus?.status === 'verified' ? "#10B981" :
+                         kycStatus?.status === 'pending' ? "#F59E0B" :
+                         kycStatus?.status === 'rejected' ? "#EF4444" : "#6B7280"}
+                  style={{ marginRight: 4 }}
+                />
+                <Text style={{
+                  color: kycStatus?.status === 'verified' ? "#10B981" :
+                         kycStatus?.status === 'pending' ? "#F59E0B" :
+                         kycStatus?.status === 'rejected' ? "#EF4444" : "#6B7280",
+                  fontWeight: "600",
+                  textTransform: "capitalize"
+                }}>
+                  {kycStatus?.status || "Not Started"}
+                </Text>
+              </View>
+            </View>
+            {(needsKyc || kycStatus?.status) && (
+              <TouchableOpacity
+                onPress={() => router.push("/(seller)/kyc")}
+                style={{
+                  marginTop: 12,
+                  paddingVertical: 8,
+                  paddingHorizontal: 16,
+                  backgroundColor: kycStatus?.status === 'verified' ? "#F0FDF4" : "#2563EB",
+                  borderRadius: 8,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 6,
+                }}
+              >
+                <Ionicons
+                  name={kycStatus?.status === 'verified' ? "eye" : "shield-checkmark"}
+                  size={16}
+                  color={kycStatus?.status === 'verified' ? "#059669" : "#fff"}
+                />
+                <Text style={{
+                  color: kycStatus?.status === 'verified' ? "#059669" : "#fff",
+                  fontWeight: "600",
+                  fontSize: 14
+                }}>
+                  {kycStatus?.status === 'verified' ? "View KYC Details" : "Complete KYC"}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </ScrollView>

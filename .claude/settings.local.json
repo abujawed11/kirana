@@ -7,7 +7,11 @@
       "Bash(findstr:*)",
       "Bash(node:*)",
       "Bash(del test-startup.js)",
-      "Bash(npx expo start:*)"
+      "Bash(npx expo start:*)",
+      "Bash(git checkout:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(mysql:*)"
     ],
     "deny": [],
     "ask": []

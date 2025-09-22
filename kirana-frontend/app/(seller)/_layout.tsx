@@ -8,6 +8,14 @@ export default function SellerLayout() {
         name="index"
         options={{ title: "Seller Dashboard", headerShown: true }}
       />
+      <Stack.Screen
+        name="kyc"
+        options={{
+          title: "KYC Verification",
+          headerShown: true,
+          presentation: "modal"
+        }}
+      />
     </Stack>
   );
 }
