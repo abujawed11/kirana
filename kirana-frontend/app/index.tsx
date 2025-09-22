@@ -15,7 +15,7 @@ export default function Index() {
 
   // ✅ if user exists, go to products page
   if (user) {
-    return <Redirect href="/products" />;
+    return <Redirect href="/(seller)" />;
   }
 
   // ❌ not logged in → go to login

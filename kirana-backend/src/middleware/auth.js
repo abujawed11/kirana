@@ -16,10 +16,15 @@ export function isTokenBlacklisted(token) {
 
 export async function authenticateToken(req, res, next) {
   try {
+    console.log('[AUTH] Processing auth for:', req.method, req.path);
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
+    console.log('[AUTH] Auth header:', authHeader ? 'Present' : 'Missing');
+    console.log('[AUTH] Token:', token ? 'Present' : 'Missing');
+
     if (!token) {
+      console.log('[AUTH] No token provided');
       return res.status(401).json({
         success: false,
         error: 'Access token required'
@@ -28,6 +33,7 @@ export async function authenticateToken(req, res, next) {
 
     // Check if token is blacklisted
     if (isTokenBlacklisted(token)) {
+      console.log('[AUTH] Token is blacklisted');
       return res.status(401).json({
         success: false,
         error: 'Token has been revoked'
@@ -35,11 +41,17 @@ export async function authenticateToken(req, res, next) {
     }
 
     // Verify token
+    console.log('[AUTH] Verifying token...');
     const decoded = jwt.verify(token, JWT_SECRET);
+    console.log('[AUTH] Decoded token:', decoded);
 
     // Additional security: verify user still exists and is active
+    console.log('[AUTH] Looking up user:', decoded.sub);
     const user = await findUserById(decoded.sub);
+    console.log('[AUTH] User found:', user ? 'Yes' : 'No');
+
     if (!user) {
+      console.log('[AUTH] User not found in database');
       return res.status(401).json({
         success: false,
         error: 'User not found'
@@ -47,6 +59,7 @@ export async function authenticateToken(req, res, next) {
     }
 
     if (!user.is_active) {
+      console.log('[AUTH] User account is inactive');
       return res.status(401).json({
         success: false,
         error: 'Account is inactive'
@@ -60,6 +73,7 @@ export async function authenticateToken(req, res, next) {
       token: token
     };
 
+    console.log('[AUTH] User authenticated successfully:', req.user);
     next();
   } catch (error) {
     if (error.name === 'TokenExpiredError') {

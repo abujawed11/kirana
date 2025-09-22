@@ -55,6 +55,16 @@ app.use(generalLimiter);
 
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
+// Add request logging middleware
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  console.log('Headers:', req.headers);
+  if (req.body && Object.keys(req.body).length > 0) {
+    console.log('Body:', req.body);
+  }
+  next();
+});
+
 app.use("/auth", authRoutes);
 app.use("/kyc", kycRoutes);
 app.use("/seller", sellerRoutes);

@@ -214,24 +214,53 @@ export default function SellerDashboard() {
             ].map((it) => (
               <TouchableOpacity
                 key={it.label}
-                onPress={() => router.push(it.route as any)}
+                onPress={() => {
+                  if (needsKyc) {
+                    router.push("/(seller)/kyc");
+                  } else {
+                    router.push(it.route as any);
+                  }
+                }}
                 style={{
                   flexGrow: 1,
                   minWidth: "47%",
                   flexBasis: "47%",
                   borderWidth: 1,
-                  borderColor: "#E5E7EB",
+                  borderColor: needsKyc ? "#FCD34D" : "#E5E7EB",
                   borderRadius: 12,
                   paddingVertical: 14,
                   paddingHorizontal: 12,
-                  backgroundColor: "#F9FAFB",
+                  backgroundColor: needsKyc ? "#FFFBEB" : "#F9FAFB",
                   flexDirection: "row",
                   alignItems: "center",
                   gap: 8,
+                  opacity: needsKyc ? 0.8 : 1,
                 }}
               >
-                <Ionicons name={it.icon as any} size={18} color="#111827" />
-                <Text style={{ fontWeight: "700", color: "#111827" }}>{it.label}</Text>
+                <Ionicons
+                  name={needsKyc ? "lock-closed" : it.icon as any}
+                  size={18}
+                  color={needsKyc ? "#D97706" : "#111827"}
+                />
+                <View style={{ flex: 1 }}>
+                  <Text style={{
+                    fontWeight: "700",
+                    color: needsKyc ? "#D97706" : "#111827",
+                    fontSize: 14
+                  }}>
+                    {it.label}
+                  </Text>
+                  {needsKyc && (
+                    <Text style={{
+                      fontSize: 11,
+                      color: "#92400E",
+                      marginTop: 2,
+                      fontWeight: "500"
+                    }}>
+                      KYC Required
+                    </Text>
+                  )}
+                </View>
               </TouchableOpacity>
             ))}
           </View>
