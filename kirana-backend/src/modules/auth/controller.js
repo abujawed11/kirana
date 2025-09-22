@@ -2,8 +2,10 @@ import {
   startSellerSignupOtp,
   completeSellerSignupWithOtp,
   resendSellerSignupOtp,
-  loginSellerService, // ✅ NEW
+  loginSellerService,
+  refreshTokenService,
 } from "./service.js";
+import { blacklistToken } from "../../middleware/auth.js";
 
 
 
@@ -19,11 +21,12 @@ export async function sellerLogin(req, res) {
       return res.status(result.status || 400).json({ success: false, error: result.error });
     }
 
-    // return token + minimal user profile
+    // return token + refresh token + minimal user profile
     return res.status(200).json({
       success: true,
       data: {
         token: result.token,
+        refreshToken: result.refreshToken,
         user: result.user,
       },
     });
@@ -122,6 +125,49 @@ export async function resendSellerOtp(req, res) {
     });
   } catch (e) {
     console.error("resendSellerOtp error:", e);
+    return res.status(500).json({ success: false, error: "Server error" });
+  }
+}
+
+export async function logout(req, res) {
+  try {
+    // Blacklist the current token
+    const token = req.user?.token;
+    if (token) {
+      blacklistToken(token);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Logged out successfully",
+    });
+  } catch (e) {
+    console.error("logout error:", e);
+    return res.status(500).json({ success: false, error: "Server error" });
+  }
+}
+
+export async function refreshToken(req, res) {
+  try {
+    const { refreshToken } = req.body ?? {};
+    if (!refreshToken) {
+      return res.status(400).json({ success: false, error: "Refresh token is required" });
+    }
+
+    const result = await refreshTokenService({ refreshToken });
+    if (!result.success) {
+      return res.status(result.status || 400).json({ success: false, error: result.error });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        token: result.token,
+        refreshToken: result.refreshToken,
+      },
+    });
+  } catch (e) {
+    console.error("refreshToken error:", e);
     return res.status(500).json({ success: false, error: "Server error" });
   }
 }

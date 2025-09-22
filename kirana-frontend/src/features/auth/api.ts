@@ -7,22 +7,32 @@ import type {
   VerifyOtpPayload,
   ResendOtpPayload,
 } from "@/types/auth";
-import { api } from "@/api/client";
+import { publicApi, api } from "@/api/client";
 
 export function signupSeller(payload: SellerSignupPayload) {
-  return api.post<ApiResponse<{ user: AuthUser }>>("/auth/seller/signup", payload);
+  return publicApi.post<ApiResponse<{ user: AuthUser }>>("/auth/seller/signup", payload);
 }
 
 export function loginSeller(payload: SellerLoginPayload) {
-  return api.post<ApiResponse<{ user: AuthUser }>>("/auth/seller/login", payload);
+  return publicApi.post<ApiResponse<{ user: AuthUser; token: string; refreshToken?: string }>>("/auth/seller/login", payload);
 }
 
 // NEW: verify OTP
 export function verifySellerOtp(payload: VerifyOtpPayload) {
-  return api.post<ApiResponse<{ user: AuthUser }>>("/auth/seller/verify-otp", payload);
+  return publicApi.post<ApiResponse<{ user: AuthUser }>>("/auth/seller/verify-otp", payload);
 }
 
 // NEW: resend OTP
 export function resendSellerOtp(payload: ResendOtpPayload) {
-  return api.post<ApiResponse<{ sentTo: string; channel: string }>>("/auth/seller/resend-otp", payload);
+  return publicApi.post<ApiResponse<{ sentTo: string; channel: string }>>("/auth/seller/resend-otp", payload);
+}
+
+// NEW: logout
+export function logoutSeller() {
+  return api.post<ApiResponse<{}>>("/auth/logout");
+}
+
+// NEW: refresh token
+export function refreshToken(refreshToken: string) {
+  return publicApi.post<ApiResponse<{ token: string; refreshToken?: string }>>("/auth/refresh", { refreshToken });
 }

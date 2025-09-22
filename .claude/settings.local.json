@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(timeout 10 npm run dev)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(node:*)",
+      "Bash(del test-startup.js)",
+      "Bash(npx expo start:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

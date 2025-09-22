@@ -17,6 +17,7 @@ import {
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { loginSeller } from "@/features/auth/api";
+import { useAuth } from "@/context/AuthContext";
 import { MotiView, MotiText, AnimatePresence } from "moti";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -394,6 +395,7 @@ const BiometricAuth = React.memo(({
 // Main login component
 export default function SellerLogin() {
   const router = useRouter();
+  const { setSession } = useAuth();
   
   const [formData, setFormData] = useState<FormData>({
     phoneOrEmail: "",
@@ -536,11 +538,15 @@ export default function SellerLogin() {
 
       if (response.success) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        
+
+        // Use the updated setSession with token and refreshToken
+        const { user, token, refreshToken } = response.data;
+        await setSession(user, token, refreshToken);
+
         // Clear form on success
         setFormData({ phoneOrEmail: "", password: "" });
         setSubmitAttempts(0);
-        
+
         // Navigate to seller dashboard
         router.replace("/(seller)");
       } else {

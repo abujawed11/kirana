@@ -48,7 +48,7 @@ const Card = ({ title, value, icon, onPress, color = "#10B981" }: {
 
 export default function SellerDashboard() {
   const router = useRouter();
-  const { user, signOut } = useAuth();
+  const { user, logout } = useAuth();
 
   return (
     <View style={{ flex: 1, backgroundColor: "#F8FAFC" }}>
@@ -71,8 +71,7 @@ export default function SellerDashboard() {
         {/* Logout */}
         <TouchableOpacity
           onPress={async () => {
-            await signOut();
-            router.replace("/(auth)/login");
+            await logout();
           }}
           style={{
             position: "absolute",

@@ -3,6 +3,14 @@ import pool from "../../db/connection.js";
 
 
 
+export async function findUserById(userId) {
+  const rows = await query(
+    "SELECT user_id, name, email, phone, role, is_active, password_hash, created_at FROM users WHERE user_id = ? LIMIT 1",
+    [userId]
+  );
+  return rows[0];
+}
+
 export async function findUserByEmailOrPhone(identifier) {
   const digits = String(identifier).replace(/\D/g, "");
   const isPhone = /^[6-9]\d{9}$/.test(digits);

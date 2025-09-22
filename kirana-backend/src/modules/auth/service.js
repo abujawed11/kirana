@@ -9,12 +9,15 @@ import {
   incrementOtpAttempts,
   resendableOtpForSignup,
   insertUserFromPayload, // creates the user row after OTP success
-  findUserByEmailOrPhone, // ✅ NEW
+  findUserByEmailOrPhone,
+  findUserById, // ✅ NEW
 } from "./repository.js";
 import { sendOtpSms, sendOtpEmail } from "./sms_email.js";
 
 const OTP_TTL_SEC = 120; // 2 minutes
 const MAX_ATTEMPTS = 5;
+const JWT_SECRET = process.env.JWT_SECRET || "dev_secret_change_me";
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "dev_refresh_secret_change_me";
 
 
 export async function loginSellerService({ identifier, password }) {
@@ -27,16 +30,24 @@ export async function loginSellerService({ identifier, password }) {
   const ok = await bcrypt.compare(password, user.password_hash);
   if (!ok) return { success: false, status: 401, error: "Invalid credentials" };
 
-  const secret = process.env.JWT_SECRET || "dev_secret_change_me";
-  const token = jwt.sign(
-    { sub: user.user_id, role: user.role },
-    secret,
-    { expiresIn: "7d" }
+  // Generate access token (30 days for mobile)
+  const accessToken = jwt.sign(
+    { sub: user.user_id, role: user.role, type: 'access' },
+    JWT_SECRET,
+    { expiresIn: "30d" }
+  );
+
+  // Generate refresh token (90 days)
+  const refreshToken = jwt.sign(
+    { sub: user.user_id, role: user.role, type: 'refresh' },
+    JWT_REFRESH_SECRET,
+    { expiresIn: "90d" }
   );
 
   return {
     success: true,
-    token,
+    token: accessToken,
+    refreshToken: refreshToken,
     user: {
       user_id: user.user_id,
       name: user.name,
@@ -45,6 +56,48 @@ export async function loginSellerService({ identifier, password }) {
       role: user.role,
     },
   };
+}
+
+export async function refreshTokenService({ refreshToken }) {
+  try {
+    // Verify refresh token
+    const decoded = jwt.verify(refreshToken, JWT_REFRESH_SECRET);
+
+    if (decoded.type !== 'refresh') {
+      return { success: false, status: 401, error: "Invalid token type" };
+    }
+
+    // Check if user still exists and is active
+    const user = await findUserById(decoded.sub);
+    if (!user || !user.is_active) {
+      return { success: false, status: 401, error: "User not found or inactive" };
+    }
+
+    // Generate new access token
+    const newAccessToken = jwt.sign(
+      { sub: user.user_id, role: user.role, type: 'access' },
+      JWT_SECRET,
+      { expiresIn: "30d" }
+    );
+
+    // Optionally generate new refresh token (rotate refresh tokens)
+    const newRefreshToken = jwt.sign(
+      { sub: user.user_id, role: user.role, type: 'refresh' },
+      JWT_REFRESH_SECRET,
+      { expiresIn: "90d" }
+    );
+
+    return {
+      success: true,
+      token: newAccessToken,
+      refreshToken: newRefreshToken,
+    };
+  } catch (error) {
+    if (error.name === 'TokenExpiredError') {
+      return { success: false, status: 401, error: "Refresh token expired" };
+    }
+    return { success: false, status: 401, error: "Invalid refresh token" };
+  }
 }
 
 function generateOtp() {
