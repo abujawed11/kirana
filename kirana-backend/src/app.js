@@ -3,6 +3,7 @@ import cors from "cors";
 import helmet from "helmet";
 import authRoutes from "./modules/auth/routes.js";
 import sellerRoutes from "./modules/seller/routes.js";
+import kycRoutes from "./modules/kyc/routes.js";
 import { generalLimiter } from "./middleware/rateLimit.js";
 
 const app = express();
@@ -55,6 +56,7 @@ app.use(generalLimiter);
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
 app.use("/auth", authRoutes);
+app.use("/kyc", kycRoutes);
 app.use("/seller", sellerRoutes);
 
 // 404
