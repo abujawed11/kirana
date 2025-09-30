@@ -139,11 +139,116 @@ export class ProductsApi {
   }
 
   static async getProduct(id: string): Promise<Product> {
-    return api.get<Product>(`/products/${id}`);
+    const response = await api.get<any>(`/products/${id}`);
+
+    console.log('Raw getProduct response:', response);
+
+    // Backend returns { success: true, data: Product }
+    const product = response.data || response;
+
+    // Transform backend snake_case format to frontend camelCase format
+    return {
+      id: String(product.id),
+      name: product.name,
+      description: product.description || '',
+      sku: product.sku,
+      category: product.category_name || product.category || '',
+      subcategory: product.subcategory_name || product.subcategory,
+      brand: product.brand,
+      price: Number(product.price),
+      costPrice: Number(product.cost_price || 0),
+      mrp: Number(product.mrp || 0),
+      stock: Number(product.stock || 0),
+      minStock: Number(product.min_stock || 0),
+      unit: product.unit || 'piece',
+      weight: product.weight ? Number(product.weight) : undefined,
+      dimensions: product.length && product.width && product.height ? {
+        length: Number(product.length),
+        width: Number(product.width),
+        height: Number(product.height)
+      } : undefined,
+      images: product.images ? product.images.map((img: any) => {
+        const imageUrl = img.image_url || img;
+
+        // Handle relative paths (new format)
+        if (imageUrl.startsWith('/')) {
+          return `${BASE_URL}${imageUrl}`;
+        }
+
+        // Handle legacy full URLs with wrong port/domain
+        if (imageUrl.includes('://')) {
+          // Extract just the path from full URL and reconstruct with current BASE_URL
+          const urlObj = new URL(imageUrl);
+          return `${BASE_URL}${urlObj.pathname}`;
+        }
+
+        return imageUrl;
+      }) : [],
+      tags: product.tags ? product.tags.map((tag: any) => tag.name || tag) : [],
+      isActive: Boolean(product.is_active),
+      sellerId: product.seller_id,
+      createdAt: product.created_at,
+      updatedAt: product.updated_at
+    };
   }
 
   static async updateProduct(productData: UpdateProductRequest): Promise<Product> {
-    return api.put<Product>(`/products/${productData.id}`, productData);
+    console.log('Updating product with data:', productData);
+
+    // Convert camelCase to snake_case for backend compatibility
+    const backendData: any = {
+      name: productData.name,
+      description: productData.description,
+      sku: productData.sku,
+      category: productData.category,
+      subcategory: productData.subcategory || null,
+      brand: productData.brand || null,
+      price: productData.price,
+      cost_price: productData.costPrice,
+      mrp: productData.mrp,
+      stock: productData.stock,
+      min_stock: productData.minStock,
+      unit: productData.unit,
+      weight: productData.weight || null,
+      is_active: productData.isActive,
+    };
+
+    // Flatten dimensions - database stores as separate columns
+    if (productData.dimensions) {
+      backendData.length = productData.dimensions.length || null;
+      backendData.width = productData.dimensions.width || null;
+      backendData.height = productData.dimensions.height || null;
+    }
+
+    // Remove undefined values
+    Object.keys(backendData).forEach(key => {
+      if (backendData[key] === undefined) {
+        delete backendData[key];
+      }
+    });
+
+    console.log('Backend formatted update data:', backendData);
+
+    try {
+      const response = await api.put<any>(`/products/${productData.id}`, backendData);
+      console.log('Raw update product response:', response);
+
+      // Backend returns { success: true, data: { product data } }
+      if (response.data) {
+        return response.data;
+      }
+
+      // Fallback if response structure is different
+      return response;
+    } catch (error) {
+      console.error('Product update API error:', error);
+      console.error('Error details:', {
+        status: (error as any)?.status,
+        message: (error as any)?.message,
+        data: (error as any)?.data
+      });
+      throw error;
+    }
   }
 
   static async deleteProduct(id: string): Promise<void> {

@@ -1,0 +1,34 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    // Node.js backend debugger
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Backend: Launch Node Server",
+      "skipFiles": [
+        "<node_internals>/**"
+      ],
+      "program": "${workspaceFolder}/kirana-backend/src/server.js",
+      "restart": true,
+      "console": "integratedTerminal",
+      "envFile": "${workspaceFolder}/kirana-backend/.env"
+    },
+
+    // React Native (Expo) debugger
+    {
+      "name": "Frontend: Expo",
+      "cwd": "${workspaceFolder}/kirana-frontend",
+      "type": "node",
+      "request": "launch",
+      "runArguments": 
+    }
+  ],
+
+  "compounds": [
+    {
+      "name": "Debug Both (Backend + Expo)",
+      "configurations": ["Backend: Launch Node Server", "Frontend: Expo"]
+    }
+  ]
+}

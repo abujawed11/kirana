@@ -922,35 +922,122 @@ const PriceInput = ({
   );
 };
 
-export default function AddProduct() {
+interface ProductFormProps {
+  initialData?: Product;
+  onSubmit?: (data: CreateProductRequest | UpdateProductRequest) => Promise<void>;
+  submitButtonText?: string;
+  isEditing?: boolean;
+  isLoading?: boolean;
+}
+
+
+export default function ProductForm({
+  initialData,
+  onSubmit,
+  submitButtonText = "Add Product",
+  isEditing = false,
+  isLoading = false
+}: ProductFormProps = {}) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
   const tagInputRef = useRef<TextInput>(null);
-  
-  const [formData, setFormData] = useState<ProductFormData>({
-    name: '',
-    description: '',
-    price: '',
-    costPrice: '',
-    originalPrice: '',
-    category: '',
-    subcategory: '',
-    brand: '',
-    sku: '',
-    stockQuantity: '',
-    minStock: '5',
-    unit: 'piece',
-    weight: '',
-    weightUnit: 'g',
-    dimensions: {
-      length: '',
-      width: '',
-      height: '',
-    },
-    tags: [],
-    images: [],
-  });
+
+  // Helper function to map category name to category ID
+  const getCategoryIdFromName = (categoryName: string): string => {
+    const categoryMap: { [key: string]: string } = {
+      'Groceries & Staples': 'groceries',
+      'Fresh Vegetables': 'vegetables',
+      'Fresh Fruits': 'fruits',
+      'Dairy & Eggs': 'dairy',
+      'Beverages': 'beverages',
+      'Snacks & Packaged': 'snacks',
+      'Household Items': 'household',
+      'Health & Wellness': 'health',
+    };
+
+    // Try exact match first
+    if (categoryMap[categoryName]) {
+      return categoryMap[categoryName];
+    }
+
+    // Try case-insensitive partial match
+    const lowerCategoryName = categoryName.toLowerCase();
+    for (const [name, id] of Object.entries(categoryMap)) {
+      if (name.toLowerCase().includes(lowerCategoryName) ||
+          lowerCategoryName.includes(name.toLowerCase())) {
+        return id;
+      }
+    }
+
+    // Return empty string if no match found
+    return '';
+  };
+
+  // Helper function to convert Product to ProductFormData
+  const getInitialFormData = (): ProductFormData => {
+    if (initialData) {
+      // Convert existing product data to form format
+      return {
+        name: initialData.name || '',
+        description: initialData.description || '',
+        price: String(initialData.price || ''),
+        costPrice: String(initialData.costPrice || ''),
+        originalPrice: String(initialData.mrp || ''),
+        category: getCategoryIdFromName(initialData.category || ''),
+        subcategory: initialData.subcategory || '',
+        brand: initialData.brand || '',
+        sku: initialData.sku || '',
+        stockQuantity: String(initialData.stock || ''),
+        minStock: String(initialData.minStock || '5'),
+        unit: initialData.unit || 'piece',
+        weight: initialData.weight ? String(initialData.weight) : '',
+        weightUnit: 'g', // Default weight unit
+        dimensions: initialData.dimensions ? {
+          length: String(initialData.dimensions.length || ''),
+          width: String(initialData.dimensions.width || ''),
+          height: String(initialData.dimensions.height || ''),
+        } : {
+          length: '',
+          width: '',
+          height: '',
+        },
+        tags: initialData.tags || [],
+        images: initialData.images?.map((url, index) => ({
+          id: `existing-${index}`,
+          uri: url,
+          type: 'image' as const,
+        })) || [],
+      };
+    }
+
+    // Default empty form data
+    return {
+      name: '',
+      description: '',
+      price: '',
+      costPrice: '',
+      originalPrice: '',
+      category: '',
+      subcategory: '',
+      brand: '',
+      sku: '',
+      stockQuantity: '',
+      minStock: '5',
+      unit: 'piece',
+      weight: '',
+      weightUnit: 'g',
+      dimensions: {
+        length: '',
+        width: '',
+        height: '',
+      },
+      tags: [],
+      images: [],
+    };
+  };
+
+  const [formData, setFormData] = useState<ProductFormData>(getInitialFormData());
 
   const [errors, setErrors] = useState<{[key: string]: string}>({});
   const [currentStep, setCurrentStep] = useState(1);
@@ -1013,6 +1100,52 @@ export default function AddProduct() {
       return;
     }
 
+    // If onSubmit prop is provided (edit mode), use it instead
+    if (onSubmit && isEditing) {
+      setLoading(true);
+      try {
+        // Get category name from category ID
+        const selectedCat = productCategories.find(c => c.id === formData.category);
+        const categoryName = selectedCat?.name || formData.category;
+
+        // Build update payload
+        const updatePayload: UpdateProductRequest = {
+          id: initialData?.id || '',
+          name: formData.name.trim(),
+          description: formData.description.trim(),
+          sku: formData.sku?.trim() || initialData?.sku || '',
+          category: categoryName,
+          subcategory: formData.subcategory || undefined,
+          brand: formData.brand || undefined,
+          price: parseFloat(formData.price),
+          costPrice: formData.costPrice ? parseFloat(formData.costPrice) : parseFloat(formData.price),
+          mrp: formData.originalPrice ? parseFloat(formData.originalPrice) : parseFloat(formData.price),
+          stock: parseInt(formData.stockQuantity || '0', 10) || 0,
+          minStock: parseInt(formData.minStock || '5', 10) || 5,
+          unit: formData.unit,
+          weight: formData.weight && formData.weight.trim() ? parseFloat(formData.weight.trim()) : undefined,
+          dimensions: (formData.dimensions.length?.trim() || formData.dimensions.width?.trim() || formData.dimensions.height?.trim())
+            ? {
+                length: formData.dimensions.length?.trim() ? parseFloat(formData.dimensions.length.trim()) || 0 : 0,
+                width: formData.dimensions.width?.trim() ? parseFloat(formData.dimensions.width.trim()) || 0 : 0,
+                height: formData.dimensions.height?.trim() ? parseFloat(formData.dimensions.height.trim()) || 0 : 0,
+              }
+            : undefined,
+          images: formData.images.map(img => img.uri),
+          tags: formData.tags || [],
+        };
+
+        await onSubmit(updatePayload);
+      } catch (error) {
+        // Error is handled by parent component
+        console.error('Error in form submit:', error);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // Create mode
     setLoading(true);
     try {
       // 1) Upload images if any
@@ -1038,19 +1171,27 @@ export default function AddProduct() {
       let finalSku = formData.sku?.trim();
       if (!finalSku) {
         try {
-          const skuRes = await ProductsApi.generateSKU(formData.name.trim(), formData.category);
+          // Get category name from category ID
+          const selectedCat = productCategories.find(c => c.id === formData.category);
+          const categoryName = selectedCat?.name || formData.category;
+
+          const skuRes = await ProductsApi.generateSKU(formData.name.trim(), categoryName);
           finalSku = skuRes?.sku || '';
         } catch (e) {
           finalSku = '';
         }
       }
 
+      // Get category name from category ID
+      const selectedCat = productCategories.find(c => c.id === formData.category);
+      const categoryName = selectedCat?.name || formData.category;
+
       // 3) Build payload
       const payload: CreateProductRequest = {
         name: formData.name.trim(),
         description: formData.description.trim(),
         sku: finalSku || `${formData.name.trim().slice(0,3).toUpperCase()}-${Date.now()}`,
-        category: formData.category,
+        category: categoryName,
         subcategory: formData.subcategory || undefined,
         brand: formData.brand || undefined,
         price: parseFloat(formData.price),
@@ -1806,7 +1947,7 @@ export default function AddProduct() {
               color: '#0F172A',
               marginBottom: 4
             }}>
-              Add New Product
+              {isEditing ? 'Edit Product' : 'Add New Product'}
             </Text>
             <View style={{
               flexDirection: 'row',
@@ -1939,7 +2080,7 @@ export default function AddProduct() {
                     fontWeight: '800',
                     color: '#FFFFFF'
                   }}>
-                    {currentStep === totalSteps ? 'Add Product' : 'Continue'}
+                    {currentStep === totalSteps ? submitButtonText : 'Continue'}
                   </Text>
                   {currentStep < totalSteps && (
                     <Ionicons name="chevron-forward" size={20} color="#FFFFFF" />

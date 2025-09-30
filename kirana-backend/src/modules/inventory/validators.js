@@ -89,8 +89,24 @@ export const createProductValidator = [
 
   body('images.*')
     .optional()
-    .isURL()
-    .withMessage('Each image must be a valid URL'),
+    .custom((value) => {
+      // Accept both full URLs and relative paths
+      if (typeof value === 'string') {
+        // Check if it's a relative path starting with /
+        if (value.startsWith('/')) {
+          return true;
+        }
+        // Check if it's a valid URL
+        try {
+          new URL(value);
+          return true;
+        } catch (e) {
+          return false;
+        }
+      }
+      return false;
+    })
+    .withMessage('Each image must be a valid URL or path'),
 
   body('tags')
     .optional()
