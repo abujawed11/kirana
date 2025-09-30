@@ -307,7 +307,7 @@ export default function MyProductsPage() {
                   color: '#10B981',
                   marginRight: 8,
                 }}>
-                  �{product.price}
+                  ₹{product.price}
                 </Text>
 
                 {hasDiscount && (
@@ -318,7 +318,7 @@ export default function MyProductsPage() {
                       textDecorationLine: 'line-through',
                       marginRight: 6,
                     }}>
-                      �{product.mrp}
+                      ₹{product.mrp}
                     </Text>
                     <View style={{
                       paddingHorizontal: 6,

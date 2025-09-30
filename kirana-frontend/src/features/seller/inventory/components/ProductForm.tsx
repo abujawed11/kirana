@@ -1059,14 +1059,14 @@ export default function AddProduct() {
         stock: parseInt(formData.stockQuantity || '0', 10) || 0,
         minStock: parseInt(formData.minStock || '5', 10) || 5,
         unit: formData.unit,
-        weight: formData.weight && formData.weight.trim() ? parseFloat(formData.weight.trim()) : null,
+        weight: formData.weight && formData.weight.trim() ? parseFloat(formData.weight.trim()) : undefined,
         dimensions: (formData.dimensions.length?.trim() || formData.dimensions.width?.trim() || formData.dimensions.height?.trim())
           ? {
               length: formData.dimensions.length?.trim() ? parseFloat(formData.dimensions.length.trim()) || 0 : 0,
               width: formData.dimensions.width?.trim() ? parseFloat(formData.dimensions.width.trim()) || 0 : 0,
               height: formData.dimensions.height?.trim() ? parseFloat(formData.dimensions.height.trim()) || 0 : 0,
             }
-          : null,
+          : undefined,
         images: imageUrls,
         tags: formData.tags || [],
       };

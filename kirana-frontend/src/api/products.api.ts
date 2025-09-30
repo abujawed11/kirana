@@ -1,5 +1,5 @@
 import { CreateProductRequest, Product, UpdateProductRequest } from '@/types/product';
-import { api, publicApi } from './client';
+import { api, publicApi, BASE_URL } from './client';
 import * as SecureStore from 'expo-secure-store';
 
 export class ProductsApi {
@@ -113,7 +113,23 @@ export class ProductsApi {
         width: Number(product.width),
         height: Number(product.height)
       } : undefined,
-      images: product.images ? product.images.map((img: any) => img.image_url || img) : [],
+      images: product.images ? product.images.map((img: any) => {
+        const imageUrl = img.image_url || img;
+
+        // Handle relative paths (new format)
+        if (imageUrl.startsWith('/')) {
+          return `${BASE_URL}${imageUrl}`;
+        }
+
+        // Handle legacy full URLs with wrong port/domain
+        if (imageUrl.includes('://')) {
+          // Extract just the path from full URL and reconstruct with current BASE_URL
+          const urlObj = new URL(imageUrl);
+          return `${BASE_URL}${urlObj.pathname}`;
+        }
+
+        return imageUrl;
+      }) : [],
       tags: product.tags ? product.tags.map((tag: any) => tag.name || tag) : [],
       isActive: Boolean(product.is_active),
       sellerId: product.seller_id,
@@ -138,7 +154,6 @@ export class ProductsApi {
     [x: string]: any; urls: string[] 
 }> {
     // For FormData uploads, we need to use custom fetch since the api client expects JSON
-    const BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://10.20.2.78:5001";
     const url = `${BASE_URL}/products/upload-images`;
 
     console.log('Upload URL:', url);

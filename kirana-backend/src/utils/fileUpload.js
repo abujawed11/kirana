@@ -38,9 +38,9 @@ export async function uploadFile(file, filePath) {
     // Write file to disk
     await writeFile(fullPath, file.buffer);
 
-    // Return the URL that can be used to access the file
-    const fileUrl = `${BASE_URL}/uploads/${filePath.replace(/\\/g, '/')}`;
-    return fileUrl;
+    // Return the relative path (without domain/port)
+    const relativePath = `/uploads/${filePath.replace(/\\/g, '/')}`;
+    return relativePath;
 
   } catch (error) {
     console.error('Error uploading file:', error);
