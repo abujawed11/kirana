@@ -4,6 +4,7 @@ import helmet from "helmet";
 import authRoutes from "./modules/auth/routes.js";
 import sellerRoutes from "./modules/seller/routes.js";
 import kycRoutes from "./modules/kyc/routes.js";
+import inventoryRoutes from "./modules/inventory/routes.js";
 import { generalLimiter } from "./middleware/rateLimit.js";
 
 const app = express();
@@ -55,6 +56,45 @@ app.use(generalLimiter);
 
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
+// Debug endpoint to check database and tables
+app.get("/debug/db", async (_req, res) => {
+  try {
+    const { query } = await import('./db/connection.js');
+
+    // Check if products table exists
+    const tables = await query("SHOW TABLES LIKE 'products'");
+    const categories = await query("SHOW TABLES LIKE 'product_categories'");
+
+    // Get some basic stats if tables exist
+    let stats = {};
+    if (tables.length > 0) {
+      const productCount = await query("SELECT COUNT(*) as count FROM products");
+      stats.products = productCount[0].count;
+    }
+    if (categories.length > 0) {
+      const categoryCount = await query("SELECT COUNT(*) as count FROM product_categories");
+      stats.categories = categoryCount[0].count;
+    }
+
+    res.json({
+      ok: true,
+      database: process.env.DB_NAME,
+      tables: {
+        products_exists: tables.length > 0,
+        categories_exists: categories.length > 0
+      },
+      stats
+    });
+  } catch (error) {
+    console.error('Database debug error:', error);
+    res.status(500).json({
+      ok: false,
+      error: error.message,
+      database: process.env.DB_NAME
+    });
+  }
+});
+
 // Add request logging middleware
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
@@ -68,6 +108,10 @@ app.use((req, res, next) => {
 app.use("/auth", authRoutes);
 app.use("/kyc", kycRoutes);
 app.use("/seller", sellerRoutes);
+app.use("/products", inventoryRoutes);
+
+// Serve uploaded files
+app.use('/uploads', express.static('./uploads'));
 
 // 404
 app.use((_req, res) => res.status(404).json({ success: false, error: "Not found" }));

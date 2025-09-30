@@ -1,881 +1,3 @@
-// import React, { useState, useEffect } from 'react';
-// import {
-//   View,
-//   Text,
-//   TextInput,
-//   TouchableOpacity,
-//   ScrollView,
-//   Alert,
-//   Image,
-//   ActivityIndicator,
-// } from 'react-native';
-// import { Ionicons } from '@expo/vector-icons';
-// import * as ImagePicker from 'expo-image-picker';
-// import { Picker } from '@react-native-picker/picker';
-// import { CreateProductRequest, DEFAULT_CATEGORIES, PRODUCT_UNITS, ProductUnit } from '@/types/product';
-// import { ProductsApi } from '@/api/products.api';
-// import { debugAuth, testApiConnection, testDatabaseConnection, testImageUploadEndpoint } from '@/utils/debug';
-
-// interface ProductFormProps {
-//   onSubmit: (product: CreateProductRequest) => Promise<void>;
-//   initialData?: Partial<CreateProductRequest>;
-//   isLoading?: boolean;
-// }
-
-// export default function ProductForm({ onSubmit, initialData, isLoading = false }: ProductFormProps) {
-//   const [formData, setFormData] = useState<CreateProductRequest>({
-//     name: '',
-//     description: '',
-//     sku: '',
-//     category: '',
-//     subcategory: '',
-//     brand: '',
-//     price: 0,
-//     costPrice: 0,
-//     mrp: 0,
-//     stock: 0,
-//     minStock: 5,
-//     unit: 'piece',
-//     weight: 0,
-//     dimensions: {
-//       length: 0,
-//       width: 0,
-//       height: 0,
-//     },
-//     images: [],
-//     tags: [],
-//     ...initialData,
-//   });
-
-//   // Store selected images locally (not uploaded yet)
-//   const [selectedImages, setSelectedImages] = useState<Array<{
-//     uri: string;
-//     name: string;
-//     type: string;
-//     fileName?: string;
-//   }>>([]);
-
-//   const [tagInput, setTagInput] = useState('');
-//   const [selectedCategory, setSelectedCategory] = useState(DEFAULT_CATEGORIES[0]);
-//   const [imageUploading, setImageUploading] = useState(false);
-//   const [skuGenerating, setSkuGenerating] = useState(false);
-
-//   useEffect(() => {
-//     if (formData.category) {
-//       const category = DEFAULT_CATEGORIES.find(cat => cat.name === formData.category);
-//       if (category) {
-//         setSelectedCategory(category);
-//       }
-//     }
-//   }, [formData.category]);
-
-//   const handleInputChange = (field: keyof CreateProductRequest, value: any) => {
-//     setFormData(prev => ({
-//       ...prev,
-//       [field]: value,
-//     }));
-//   };
-
-//   const handleDimensionChange = (dimension: 'length' | 'width' | 'height', value: string) => {
-//     setFormData(prev => ({
-//       ...prev,
-//       dimensions: {
-//         ...prev.dimensions!,
-//         [dimension]: parseFloat(value) || 0,
-//       },
-//     }));
-//   };
-
-//   const generateSKU = async () => {
-//     if (!formData.name || !formData.category) {
-//       Alert.alert('Error', 'Please enter product name and select category first');
-//       return;
-//     }
-
-//     setSkuGenerating(true);
-//     try {
-//       console.log('Generating SKU for:', { name: formData.name, category: formData.category });
-
-//       // Debug auth first
-//       await debugAuth();
-
-//       const response = await ProductsApi.generateSKU(formData.name, formData.category);
-//       console.log('SKU generation response:', response);
-//       handleInputChange('sku', response.sku);
-//     } catch (error) {
-//       console.error('SKU generation error:', error);
-//       Alert.alert('Error', error instanceof Error ? error.message : 'Failed to generate SKU');
-//     } finally {
-//       setSkuGenerating(false);
-//     }
-//   };
-
-//   const runDebugTests = async () => {
-//     console.log('=== RUNNING DEBUG TESTS ===');
-
-//     // Test auth
-//     const authInfo = await debugAuth();
-//     console.log('Auth info:', authInfo);
-
-//     // Test API connection
-//     const apiTest = await testApiConnection();
-//     console.log('API test:', apiTest);
-
-//     // Test database
-//     const dbTest = await testDatabaseConnection();
-//     console.log('Database test:', dbTest);
-
-//     // Test image upload endpoint
-//     const imageUploadTest = await testImageUploadEndpoint();
-//     console.log('Image upload test:', imageUploadTest);
-
-//     const message = `
-// API: ${apiTest.success ? '✅' : '❌'}
-// Database: ${dbTest.success ? '✅' : '❌'}
-// Auth: ${authInfo?.hasToken ? '✅' : '❌'}
-// Image Upload: ${imageUploadTest.success ? '✅' : '❌'}
-
-// ${!dbTest.success || !dbTest.data?.tables?.products_exists ?
-//   'NOTE: You may need to run the database schema!' :
-//   'Database tables are ready!'}
-
-// ${!imageUploadTest.success ?
-//   'NOTE: Image upload endpoint is not accessible!' :
-//   `Image endpoint status: ${imageUploadTest.post?.status}`}
-//     `;
-
-//     Alert.alert('Debug Results', message);
-//   };
-
-//   const pickImage = async () => {
-//     try {
-//       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-//       if (permissionResult.granted === false) {
-//         Alert.alert('Permission required', 'Permission to access camera roll is required!');
-//         return;
-//       }
-
-//       const result = await ImagePicker.launchImageLibraryAsync({
-//         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-//         allowsEditing: true,
-//         aspect: [1, 1],
-//         quality: 0.8,
-//         base64: false, // Don't include base64 for better performance
-//       });
-
-//       if (!result.canceled && result.assets && result.assets.length > 0) {
-//         const asset = result.assets[0];
-//         console.log('Selected image:', asset);
-
-//         // Store image locally instead of uploading immediately
-//         const imageData = {
-//           uri: asset.uri,
-//           type: asset.mimeType || 'image/jpeg',
-//           name: asset.fileName || 'product-image.jpg',
-//           fileName: asset.fileName || 'product-image.jpg',
-//         };
-
-//         setSelectedImages(prev => [...prev, imageData]);
-//         console.log('Image stored locally:', imageData);
-//       }
-//     } catch (error) {
-//       console.error('Image picker error:', error);
-//       Alert.alert('Error', 'Failed to pick image');
-//     }
-//   };
-
-//   const removeSelectedImage = (index: number) => {
-//     const newImages = selectedImages.filter((_, i) => i !== index);
-//     setSelectedImages(newImages);
-//   };
-
-//   const removeUploadedImage = (index: number) => {
-//     const newImages = formData.images.filter((_, i) => i !== index);
-//     handleInputChange('images', newImages);
-//   };
-
-//   const addTag = () => {
-//     if (tagInput.trim() && !formData.tags.includes(tagInput.trim())) {
-//       handleInputChange('tags', [...formData.tags, tagInput.trim()]);
-//       setTagInput('');
-//     }
-//   };
-
-//   const removeTag = (tag: string) => {
-//     handleInputChange('tags', formData.tags.filter(t => t !== tag));
-//   };
-
-//   const handleSubmit = async () => {
-//     console.log('Form data before submit:', formData);
-
-//     if (!formData.name || !formData.category || !formData.sku || formData.price <= 0) {
-//       Alert.alert('Error', 'Please fill in all required fields (Name, Category, SKU, Price)');
-//       return;
-//     }
-
-//     try {
-//       setImageUploading(true);
-
-//       // Upload selected images first if any
-//       let uploadedImageUrls: string[] = [];
-
-//       if (selectedImages.length > 0) {
-//         console.log('Uploading', selectedImages.length, 'selected images...');
-
-//         for (const imageData of selectedImages) {
-//           const imageFormData = new FormData();
-//           imageFormData.append('images', {
-//             uri: imageData.uri,
-//             type: imageData.type,
-//             name: imageData.name,
-//           } as any);
-
-//           console.log('Uploading image:', imageData.name);
-//           const uploadResponse = await ProductsApi.uploadProductImages(imageFormData);
-//           uploadedImageUrls.push(...uploadResponse.urls);
-//         }
-
-//         console.log('All images uploaded successfully:', uploadedImageUrls);
-//       }
-
-//       // Combine uploaded images with existing form images
-//       const allImages = [...formData.images, ...uploadedImageUrls];
-
-//       // Create product with all images
-//       const productDataWithImages = {
-//         ...formData,
-//         images: allImages,
-//       };
-
-//       console.log('Submitting product data with uploaded images:', productDataWithImages);
-//       await onSubmit(productDataWithImages);
-
-//       // Clear selected images after successful submission
-//       setSelectedImages([]);
-
-//     } catch (error) {
-//       console.error('Error during product creation:', error);
-//       Alert.alert('Error', error instanceof Error ? error.message : 'Failed to create product');
-//     } finally {
-//       setImageUploading(false);
-//     }
-//   };
-
-//   return (
-//     <ScrollView style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
-//       <View style={{ padding: 20, gap: 20 }}>
-//         {/* Basic Information */}
-//         <View style={{
-//           backgroundColor: '#fff',
-//           borderRadius: 16,
-//           padding: 16,
-//           shadowColor: '#000',
-//           shadowOffset: { width: 0, height: 2 },
-//           shadowOpacity: 0.1,
-//           shadowRadius: 8,
-//           elevation: 3,
-//         }}>
-//           <Text style={{ fontSize: 18, fontWeight: '700', color: '#111827', marginBottom: 16 }}>
-//             Basic Information
-//           </Text>
-
-//           <View style={{ gap: 16 }}>
-//             <View>
-//               <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>
-//                 Product Name *
-//               </Text>
-//               <TextInput
-//                 style={{
-//                   borderWidth: 1,
-//                   borderColor: '#D1D5DB',
-//                   borderRadius: 8,
-//                   padding: 12,
-//                   fontSize: 16,
-//                   backgroundColor: '#fff',
-//                 }}
-//                 value={formData.name}
-//                 onChangeText={(value) => handleInputChange('name', value)}
-//                 placeholder="Enter product name"
-//               />
-//             </View>
-
-//             <View>
-//               <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>
-//                 Description
-//               </Text>
-//               <TextInput
-//                 style={{
-//                   borderWidth: 1,
-//                   borderColor: '#D1D5DB',
-//                   borderRadius: 8,
-//                   padding: 12,
-//                   fontSize: 16,
-//                   backgroundColor: '#fff',
-//                   minHeight: 80,
-//                 }}
-//                 value={formData.description}
-//                 onChangeText={(value) => handleInputChange('description', value)}
-//                 placeholder="Enter product description"
-//                 multiline
-//                 numberOfLines={3}
-//               />
-//             </View>
-
-//             <View>
-//               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-//                 <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151' }}>
-//                   SKU *
-//                 </Text>
-//                 <View style={{ flexDirection: 'row', gap: 8 }}>
-//                   <TouchableOpacity
-//                     onPress={generateSKU}
-//                     disabled={skuGenerating}
-//                     style={{
-//                       flexDirection: 'row',
-//                       alignItems: 'center',
-//                       paddingHorizontal: 12,
-//                       paddingVertical: 6,
-//                       backgroundColor: '#2563EB',
-//                       borderRadius: 6,
-//                       gap: 4,
-//                     }}
-//                   >
-//                     {skuGenerating ? (
-//                       <ActivityIndicator size="small" color="#fff" />
-//                     ) : (
-//                       <Ionicons name="refresh" size={16} color="#fff" />
-//                     )}
-//                     <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600' }}>
-//                       Generate
-//                     </Text>
-//                   </TouchableOpacity>
-
-//                   <TouchableOpacity
-//                     onPress={runDebugTests}
-//                     style={{
-//                       flexDirection: 'row',
-//                       alignItems: 'center',
-//                       paddingHorizontal: 12,
-//                       paddingVertical: 6,
-//                       backgroundColor: '#DC2626',
-//                       borderRadius: 6,
-//                       gap: 4,
-//                     }}
-//                   >
-//                     <Ionicons name="bug" size={16} color="#fff" />
-//                     <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600' }}>
-//                       Debug
-//                     </Text>
-//                   </TouchableOpacity>
-//                 </View>
-//               </View>
-//               <TextInput
-//                 style={{
-//                   borderWidth: 1,
-//                   borderColor: '#D1D5DB',
-//                   borderRadius: 8,
-//                   padding: 12,
-//                   fontSize: 16,
-//                   backgroundColor: '#fff',
-//                 }}
-//                 value={formData.sku}
-//                 onChangeText={(value) => handleInputChange('sku', value)}
-//                 placeholder="Enter SKU or generate"
-//               />
-//             </View>
-
-//             <View>
-//               <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>
-//                 Brand
-//               </Text>
-//               <TextInput
-//                 style={{
-//                   borderWidth: 1,
-//                   borderColor: '#D1D5DB',
-//                   borderRadius: 8,
-//                   padding: 12,
-//                   fontSize: 16,
-//                   backgroundColor: '#fff',
-//                 }}
-//                 value={formData.brand}
-//                 onChangeText={(value) => handleInputChange('brand', value)}
-//                 placeholder="Enter brand name"
-//               />
-//             </View>
-//           </View>
-//         </View>
-
-//         {/* Category & Classification */}
-//         <View style={{
-//           backgroundColor: '#fff',
-//           borderRadius: 16,
-//           padding: 16,
-//           shadowColor: '#000',
-//           shadowOffset: { width: 0, height: 2 },
-//           shadowOpacity: 0.1,
-//           shadowRadius: 8,
-//           elevation: 3,
-//         }}>
-//           <Text style={{ fontSize: 18, fontWeight: '700', color: '#111827', marginBottom: 16 }}>
-//             Category & Classification
-//           </Text>
-
-//           <View style={{ gap: 16 }}>
-//             <View>
-//               <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>
-//                 Category *
-//               </Text>
-//               <View style={{
-//                 borderWidth: 1,
-//                 borderColor: '#D1D5DB',
-//                 borderRadius: 8,
-//                 backgroundColor: '#fff',
-//               }}>
-//                 <Picker
-//                   selectedValue={formData.category}
-//                   onValueChange={(value) => handleInputChange('category', value)}
-//                   style={{ height: 50 }}
-//                 >
-//                   <Picker.Item label="Select category" value="" />
-//                   {DEFAULT_CATEGORIES.map((category) => (
-//                     <Picker.Item key={category.id} label={category.name} value={category.name} />
-//                   ))}
-//                 </Picker>
-//               </View>
-//             </View>
-
-//             {selectedCategory.subcategories.length > 0 && (
-//               <View>
-//                 <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>
-//                   Subcategory
-//                 </Text>
-//                 <View style={{
-//                   borderWidth: 1,
-//                   borderColor: '#D1D5DB',
-//                   borderRadius: 8,
-//                   backgroundColor: '#fff',
-//                 }}>
-//                   <Picker
-//                     selectedValue={formData.subcategory}
-//                     onValueChange={(value) => handleInputChange('subcategory', value)}
-//                     style={{ height: 50 }}
-//                   >
-//                     <Picker.Item label="Select subcategory" value="" />
-//                     {selectedCategory.subcategories.map((subcategory) => (
-//                       <Picker.Item key={subcategory} label={subcategory} value={subcategory} />
-//                     ))}
-//                   </Picker>
-//                 </View>
-//               </View>
-//             )}
-//           </View>
-//         </View>
-
-//         {/* Pricing */}
-//         <View style={{
-//           backgroundColor: '#fff',
-//           borderRadius: 16,
-//           padding: 16,
-//           shadowColor: '#000',
-//           shadowOffset: { width: 0, height: 2 },
-//           shadowOpacity: 0.1,
-//           shadowRadius: 8,
-//           elevation: 3,
-//         }}>
-//           <Text style={{ fontSize: 18, fontWeight: '700', color: '#111827', marginBottom: 16 }}>
-//             Pricing
-//           </Text>
-
-//           <View style={{ gap: 16 }}>
-//             <View style={{ flexDirection: 'row', gap: 12 }}>
-//               <View style={{ flex: 1 }}>
-//                 <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>
-//                   Cost Price
-//                 </Text>
-//                 <TextInput
-//                   style={{
-//                     borderWidth: 1,
-//                     borderColor: '#D1D5DB',
-//                     borderRadius: 8,
-//                     padding: 12,
-//                     fontSize: 16,
-//                     backgroundColor: '#fff',
-//                   }}
-//                   value={formData.costPrice.toString()}
-//                   onChangeText={(value) => handleInputChange('costPrice', parseFloat(value) || 0)}
-//                   placeholder="0"
-//                   keyboardType="numeric"
-//                 />
-//               </View>
-//               <View style={{ flex: 1 }}>
-//                 <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>
-//                   Selling Price *
-//                 </Text>
-//                 <TextInput
-//                   style={{
-//                     borderWidth: 1,
-//                     borderColor: '#D1D5DB',
-//                     borderRadius: 8,
-//                     padding: 12,
-//                     fontSize: 16,
-//                     backgroundColor: '#fff',
-//                   }}
-//                   value={formData.price.toString()}
-//                   onChangeText={(value) => handleInputChange('price', parseFloat(value) || 0)}
-//                   placeholder="0"
-//                   keyboardType="numeric"
-//                 />
-//               </View>
-//             </View>
-
-//             <View>
-//               <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>
-//                 MRP
-//               </Text>
-//               <TextInput
-//                 style={{
-//                   borderWidth: 1,
-//                   borderColor: '#D1D5DB',
-//                   borderRadius: 8,
-//                   padding: 12,
-//                   fontSize: 16,
-//                   backgroundColor: '#fff',
-//                 }}
-//                 value={formData.mrp.toString()}
-//                 onChangeText={(value) => handleInputChange('mrp', parseFloat(value) || 0)}
-//                 placeholder="0"
-//                 keyboardType="numeric"
-//               />
-//             </View>
-//           </View>
-//         </View>
-
-//         {/* Inventory */}
-//         <View style={{
-//           backgroundColor: '#fff',
-//           borderRadius: 16,
-//           padding: 16,
-//           shadowColor: '#000',
-//           shadowOffset: { width: 0, height: 2 },
-//           shadowOpacity: 0.1,
-//           shadowRadius: 8,
-//           elevation: 3,
-//         }}>
-//           <Text style={{ fontSize: 18, fontWeight: '700', color: '#111827', marginBottom: 16 }}>
-//             Inventory
-//           </Text>
-
-//           <View style={{ gap: 16 }}>
-//             <View style={{ flexDirection: 'row', gap: 12 }}>
-//               <View style={{ flex: 1 }}>
-//                 <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>
-//                   Stock Quantity
-//                 </Text>
-//                 <TextInput
-//                   style={{
-//                     borderWidth: 1,
-//                     borderColor: '#D1D5DB',
-//                     borderRadius: 8,
-//                     padding: 12,
-//                     fontSize: 16,
-//                     backgroundColor: '#fff',
-//                   }}
-//                   value={formData.stock.toString()}
-//                   onChangeText={(value) => handleInputChange('stock', parseInt(value) || 0)}
-//                   placeholder="0"
-//                   keyboardType="numeric"
-//                 />
-//               </View>
-//               <View style={{ flex: 1 }}>
-//                 <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>
-//                   Unit
-//                 </Text>
-//                 <View style={{
-//                   borderWidth: 1,
-//                   borderColor: '#D1D5DB',
-//                   borderRadius: 8,
-//                   backgroundColor: '#fff',
-//                 }}>
-//                   <Picker
-//                     selectedValue={formData.unit}
-//                     onValueChange={(value) => handleInputChange('unit', value)}
-//                     style={{ height: 50 }}
-//                   >
-//                     {PRODUCT_UNITS.map((unit) => (
-//                       <Picker.Item key={unit} label={unit} value={unit} />
-//                     ))}
-//                   </Picker>
-//                 </View>
-//               </View>
-//             </View>
-
-//             <View>
-//               <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>
-//                 Minimum Stock Alert
-//               </Text>
-//               <TextInput
-//                 style={{
-//                   borderWidth: 1,
-//                   borderColor: '#D1D5DB',
-//                   borderRadius: 8,
-//                   padding: 12,
-//                   fontSize: 16,
-//                   backgroundColor: '#fff',
-//                 }}
-//                 value={formData.minStock.toString()}
-//                 onChangeText={(value) => handleInputChange('minStock', parseInt(value) || 0)}
-//                 placeholder="5"
-//                 keyboardType="numeric"
-//               />
-//             </View>
-//           </View>
-//         </View>
-
-//         {/* Images */}
-//         <View style={{
-//           backgroundColor: '#fff',
-//           borderRadius: 16,
-//           padding: 16,
-//           shadowColor: '#000',
-//           shadowOffset: { width: 0, height: 2 },
-//           shadowOpacity: 0.1,
-//           shadowRadius: 8,
-//           elevation: 3,
-//         }}>
-//           <Text style={{ fontSize: 18, fontWeight: '700', color: '#111827', marginBottom: 16 }}>
-//             Product Images
-//           </Text>
-
-//           <TouchableOpacity
-//             onPress={pickImage}
-//             disabled={imageUploading || isLoading}
-//             style={{
-//               borderWidth: 2,
-//               borderColor: '#D1D5DB',
-//               borderStyle: 'dashed',
-//               borderRadius: 8,
-//               padding: 20,
-//               alignItems: 'center',
-//               gap: 8,
-//               marginBottom: 16,
-//             }}
-//           >
-//             <Ionicons name="image-outline" size={32} color="#6B7280" />
-//             <Text style={{ color: '#6B7280', fontSize: 14 }}>Tap to select images</Text>
-//             <Text style={{ color: '#9CA3AF', fontSize: 12 }}>Images will be uploaded when you create the product</Text>
-//           </TouchableOpacity>
-
-//           {/* Selected Images (not uploaded yet) */}
-//           {selectedImages.length > 0 && (
-//             <View style={{ marginBottom: 16 }}>
-//               <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>
-//                 Selected Images ({selectedImages.length})
-//               </Text>
-//               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-//                 {selectedImages.map((imageData, index) => (
-//                   <View key={index} style={{ position: 'relative' }}>
-//                     <Image
-//                       source={{ uri: imageData.uri }}
-//                       style={{ width: 80, height: 80, borderRadius: 8 }}
-//                     />
-//                     <TouchableOpacity
-//                       onPress={() => removeSelectedImage(index)}
-//                       style={{
-//                         position: 'absolute',
-//                         top: -8,
-//                         right: -8,
-//                         backgroundColor: '#EF4444',
-//                         borderRadius: 12,
-//                         width: 24,
-//                         height: 24,
-//                         justifyContent: 'center',
-//                         alignItems: 'center',
-//                       }}
-//                     >
-//                       <Ionicons name="close" size={16} color="#fff" />
-//                     </TouchableOpacity>
-//                     {/* Indicator that it's not uploaded yet */}
-//                     <View style={{
-//                       position: 'absolute',
-//                       bottom: 2,
-//                       right: 2,
-//                       backgroundColor: '#F59E0B',
-//                       borderRadius: 8,
-//                       paddingHorizontal: 4,
-//                       paddingVertical: 2,
-//                     }}>
-//                       <Text style={{ color: '#fff', fontSize: 8, fontWeight: '600' }}>PENDING</Text>
-//                     </View>
-//                   </View>
-//                 ))}
-//               </View>
-//             </View>
-//           )}
-
-//           {/* Already Uploaded Images */}
-//           {formData.images.length > 0 && (
-//             <View>
-//               <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>
-//                 Uploaded Images ({formData.images.length})
-//               </Text>
-//               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-//                 {formData.images.map((image, index) => (
-//                   <View key={index} style={{ position: 'relative' }}>
-//                     <Image
-//                       source={{ uri: image }}
-//                       style={{ width: 80, height: 80, borderRadius: 8 }}
-//                     />
-//                     <TouchableOpacity
-//                       onPress={() => removeUploadedImage(index)}
-//                       style={{
-//                         position: 'absolute',
-//                         top: -8,
-//                         right: -8,
-//                         backgroundColor: '#EF4444',
-//                         borderRadius: 12,
-//                         width: 24,
-//                         height: 24,
-//                         justifyContent: 'center',
-//                         alignItems: 'center',
-//                       }}
-//                     >
-//                       <Ionicons name="close" size={16} color="#fff" />
-//                     </TouchableOpacity>
-//                     {/* Indicator that it's uploaded */}
-//                     <View style={{
-//                       position: 'absolute',
-//                       bottom: 2,
-//                       right: 2,
-//                       backgroundColor: '#10B981',
-//                       borderRadius: 8,
-//                       paddingHorizontal: 4,
-//                       paddingVertical: 2,
-//                     }}>
-//                       <Text style={{ color: '#fff', fontSize: 8, fontWeight: '600' }}>UPLOADED</Text>
-//                     </View>
-//                   </View>
-//                 ))}
-//               </View>
-//             </View>
-//           )}
-//         </View>
-
-//         {/* Tags */}
-//         <View style={{
-//           backgroundColor: '#fff',
-//           borderRadius: 16,
-//           padding: 16,
-//           shadowColor: '#000',
-//           shadowOffset: { width: 0, height: 2 },
-//           shadowOpacity: 0.1,
-//           shadowRadius: 8,
-//           elevation: 3,
-//         }}>
-//           <Text style={{ fontSize: 18, fontWeight: '700', color: '#111827', marginBottom: 16 }}>
-//             Tags
-//           </Text>
-
-//           <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
-//             <TextInput
-//               style={{
-//                 flex: 1,
-//                 borderWidth: 1,
-//                 borderColor: '#D1D5DB',
-//                 borderRadius: 8,
-//                 padding: 12,
-//                 fontSize: 16,
-//                 backgroundColor: '#fff',
-//               }}
-//               value={tagInput}
-//               onChangeText={setTagInput}
-//               placeholder="Enter tag and press Add"
-//               onSubmitEditing={addTag}
-//             />
-//             <TouchableOpacity
-//               onPress={addTag}
-//               style={{
-//                 paddingHorizontal: 16,
-//                 paddingVertical: 12,
-//                 backgroundColor: '#2563EB',
-//                 borderRadius: 8,
-//                 justifyContent: 'center',
-//               }}
-//             >
-//               <Text style={{ color: '#fff', fontWeight: '600' }}>Add</Text>
-//             </TouchableOpacity>
-//           </View>
-
-//           {formData.tags.length > 0 && (
-//             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-//               {formData.tags.map((tag) => (
-//                 <TouchableOpacity
-//                   key={tag}
-//                   onPress={() => removeTag(tag)}
-//                   style={{
-//                     backgroundColor: '#EEF2FF',
-//                     paddingHorizontal: 12,
-//                     paddingVertical: 6,
-//                     borderRadius: 16,
-//                     flexDirection: 'row',
-//                     alignItems: 'center',
-//                     gap: 4,
-//                   }}
-//                 >
-//                   <Text style={{ color: '#2563EB', fontSize: 14 }}>{tag}</Text>
-//                   <Ionicons name="close" size={14} color="#2563EB" />
-//                 </TouchableOpacity>
-//               ))}
-//             </View>
-//           )}
-//         </View>
-
-//         {/* Submit Button */}
-//         <TouchableOpacity
-//           onPress={handleSubmit}
-//           disabled={isLoading || imageUploading}
-//           style={{
-//             backgroundColor: (isLoading || imageUploading) ? '#9CA3AF' : '#2563EB',
-//             borderRadius: 12,
-//             paddingVertical: 16,
-//             alignItems: 'center',
-//             flexDirection: 'row',
-//             justifyContent: 'center',
-//             gap: 8,
-//             marginBottom: 40,
-//           }}
-//         >
-//           {(isLoading || imageUploading) && <ActivityIndicator size="small" color="#fff" />}
-//           <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>
-//             {imageUploading ? 'Uploading Images...' : (isLoading ? 'Creating Product...' : 'Create Product')}
-//           </Text>
-//         </TouchableOpacity>
-
-//         {selectedImages.length > 0 && (
-//           <View style={{
-//             backgroundColor: '#FEF3C7',
-//             borderRadius: 8,
-//             padding: 12,
-//             marginBottom: 20,
-//             flexDirection: 'row',
-//             alignItems: 'center',
-//             gap: 8,
-//           }}>
-//             <Ionicons name="information-circle" size={20} color="#D97706" />
-//             <Text style={{ color: '#D97706', fontSize: 14, flex: 1 }}>
-//               {selectedImages.length} image(s) will be uploaded when you create the product
-//             </Text>
-//           </View>
-//         )}
-//       </View>
-//     </ScrollView>
-//   );
-// }
-
-
-
-
-
 import React, { useState, useCallback, useRef } from "react";
 import {
   View,
@@ -897,6 +19,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
+import { ProductsApi } from "@/api/products.api";
+import { CreateProductRequest } from "@/types/product";
 
 const { width, height } = Dimensions.get("window");
 
@@ -912,14 +36,17 @@ interface ProductFormData {
   name: string;
   description: string;
   price: string;
+  costPrice: string;
   originalPrice: string;
   category: string;
   subcategory: string;
   brand: string;
   sku: string;
   stockQuantity: string;
+  minStock: string;
   unit: string;
   weight: string;
+  weightUnit: string;
   dimensions: {
     length: string;
     width: string;
@@ -936,49 +63,307 @@ interface Category {
   subcategories: string[];
 }
 
-// Categories data with proper typing
+// Categories data with proper typing for Kirana store
 const productCategories: Category[] = [
   {
-    id: 'electronics',
-    name: 'Electronics',
-    icon: 'phone-portrait-outline',
-    subcategories: ['Smartphones', 'Laptops', 'Accessories', 'Audio', 'Smart Home']
+    id: 'groceries',
+    name: 'Groceries & Staples',
+    icon: 'basket-outline',
+    subcategories: ['Rice & Grains', 'Dal & Pulses', 'Flour & Atta', 'Sugar & Jaggery', 'Cooking Oil', 'Spices & Masalas']
   },
   {
-    id: 'fashion',
-    name: 'Fashion',
-    icon: 'shirt-outline',
-    subcategories: ['Men\'s Clothing', 'Women\'s Clothing', 'Shoes', 'Accessories', 'Bags']
+    id: 'vegetables',
+    name: 'Fresh Vegetables',
+    icon: 'leaf-outline',
+    subcategories: ['Leafy Vegetables', 'Root Vegetables', 'Gourds', 'Beans & Pods', 'Onions & Garlic', 'Tomatoes & Capsicum']
   },
   {
-    id: 'home',
-    name: 'Home & Garden',
+    id: 'fruits',
+    name: 'Fresh Fruits',
+    icon: 'nutrition-outline',
+    subcategories: ['Seasonal Fruits', 'Citrus Fruits', 'Dry Fruits & Nuts', 'Exotic Fruits', 'Bananas', 'Apples & Grapes']
+  },
+  {
+    id: 'dairy',
+    name: 'Dairy & Eggs',
+    icon: 'cafe-outline',
+    subcategories: ['Milk', 'Curd & Yogurt', 'Paneer', 'Butter & Ghee', 'Cheese', 'Eggs']
+  },
+  {
+    id: 'beverages',
+    name: 'Beverages',
+    icon: 'wine-outline',
+    subcategories: ['Tea & Coffee', 'Cold Drinks', 'Juices', 'Energy Drinks', 'Water', 'Health Drinks']
+  },
+  {
+    id: 'snacks',
+    name: 'Snacks & Packaged',
+    icon: 'fast-food-outline',
+    subcategories: ['Biscuits & Cookies', 'Namkeen & Chips', 'Sweets', 'Chocolates', 'Instant Noodles', 'Ready to Eat']
+  },
+  {
+    id: 'household',
+    name: 'Household Items',
     icon: 'home-outline',
-    subcategories: ['Furniture', 'Kitchen', 'Garden', 'Decor', 'Storage']
+    subcategories: ['Cleaning Supplies', 'Detergents', 'Personal Care', 'Baby Care', 'Kitchen Utensils', 'Plastic Items']
   },
   {
-    id: 'beauty',
-    name: 'Beauty & Health',
-    icon: 'flower-outline',
-    subcategories: ['Skincare', 'Makeup', 'Hair Care', 'Supplements', 'Personal Care']
-  },
-  {
-    id: 'sports',
-    name: 'Sports & Fitness',
-    icon: 'football-outline',
-    subcategories: ['Exercise Equipment', 'Outdoor Sports', 'Team Sports', 'Fitness Apparel']
-  },
-  {
-    id: 'books',
-    name: 'Books & Media',
-    icon: 'book-outline',
-    subcategories: ['Books', 'eBooks', 'Audio Books', 'Games', 'Music']
+    id: 'health',
+    name: 'Health & Wellness',
+    icon: 'medical-outline',
+    subcategories: ['Medicines', 'Health Supplements', 'Ayurvedic Products', 'First Aid', 'Baby Health', 'Vitamins']
   }
 ];
 
-const units = ['pcs', 'kg', 'g', 'ml', 'l', 'pack', 'box', 'set'];
+const units = [
+  { label: 'Piece', value: 'piece' },
+  { label: 'Kilogram (kg)', value: 'kg' },
+  { label: 'Gram (g)', value: 'g' },
+  { label: 'Milliliter (ml)', value: 'ml' },
+  { label: 'Liter (l)', value: 'liter' },
+  { label: 'Packet', value: 'packet' },
+  { label: 'Box', value: 'box' },
+  { label: 'Dozen', value: 'dozen' }
+];
+
+const weightUnits = [
+  { label: 'Grams', value: 'g' },
+  { label: 'Kilograms', value: 'kg' },
+  { label: 'Pounds', value: 'lbs' },
+  { label: 'Ounces', value: 'oz' }
+];
 
 // Custom Components
+const NumericInput = ({
+  label,
+  value,
+  onChangeText,
+  placeholder,
+  icon,
+  required = false,
+  error,
+  maxLength = 10,
+  allowDecimal = true,
+}: {
+  label: string;
+  value: string;
+  onChangeText: (text: string) => void;
+  placeholder: string;
+  icon?: keyof typeof Ionicons.glyphMap;
+  required?: boolean;
+  error?: string;
+  maxLength?: number;
+  allowDecimal?: boolean;
+}) => {
+  const handleTextChange = (text: string) => {
+    // Only allow numbers, decimal point (if allowed), and handle edge cases
+    let filteredText = text;
+
+    if (allowDecimal) {
+      // Allow numbers and one decimal point
+      filteredText = text.replace(/[^0-9.]/g, '');
+      // Ensure only one decimal point
+      const parts = filteredText.split('.');
+      if (parts.length > 2) {
+        filteredText = parts[0] + '.' + parts.slice(1).join('');
+      }
+    } else {
+      // Only allow integers
+      filteredText = text.replace(/[^0-9]/g, '');
+    }
+
+    onChangeText(filteredText);
+  };
+
+  return (
+    <View style={{ marginBottom: 24 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+        {icon && <Ionicons name={icon} size={16} color="#64748B" style={{ marginRight: 8 }} />}
+        <Text style={{
+          fontSize: 16,
+          fontWeight: '700',
+          color: '#0F172A',
+          flex: 1
+        }}>
+          {label}
+          {required && <Text style={{ color: '#EF4444' }}> *</Text>}
+        </Text>
+        <Text style={{
+          fontSize: 12,
+          color: '#94A3B8',
+          fontWeight: '500'
+        }}>
+          {value.length}/{maxLength}
+        </Text>
+      </View>
+      <TextInput
+        value={value}
+        onChangeText={handleTextChange}
+        placeholder={placeholder}
+        placeholderTextColor="#94A3B8"
+        keyboardType="numeric"
+        maxLength={maxLength}
+        style={{
+          borderWidth: 1.5,
+          borderColor: error ? '#EF4444' : value ? '#10B981' : '#E2E8F0',
+          borderRadius: 16,
+          paddingHorizontal: 16,
+          paddingVertical: 14,
+          fontSize: 16,
+          fontWeight: '500',
+          color: '#0F172A',
+          backgroundColor: '#FFFFFF',
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.05,
+          shadowRadius: 4,
+          elevation: 2,
+        }}
+      />
+      {error && (
+        <Text style={{
+          color: '#EF4444',
+          fontSize: 14,
+          fontWeight: '500',
+          marginTop: 6,
+          marginLeft: 4
+        }}>
+          {error}
+        </Text>
+      )}
+    </View>
+  );
+};
+
+const DropdownInput = ({
+  label,
+  value,
+  onValueChange,
+  options,
+  placeholder,
+  icon,
+  required = false,
+  error,
+}: {
+  label: string;
+  value: string;
+  onValueChange: (value: string) => void;
+  options: { label: string; value: string }[];
+  placeholder: string;
+  icon?: keyof typeof Ionicons.glyphMap;
+  required?: boolean;
+  error?: string;
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const selectedOption = options.find(option => option.value === value);
+
+  return (
+    <View style={{ marginBottom: 24 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+        {icon && <Ionicons name={icon} size={16} color="#64748B" style={{ marginRight: 8 }} />}
+        <Text style={{
+          fontSize: 16,
+          fontWeight: '700',
+          color: '#0F172A',
+          flex: 1
+        }}>
+          {label}
+          {required && <Text style={{ color: '#EF4444' }}> *</Text>}
+        </Text>
+      </View>
+
+      <TouchableOpacity
+        onPress={() => setIsOpen(!isOpen)}
+        style={{
+          borderWidth: 1.5,
+          borderColor: error ? '#EF4444' : value ? '#10B981' : '#E2E8F0',
+          borderRadius: 16,
+          paddingHorizontal: 16,
+          paddingVertical: 14,
+          backgroundColor: '#FFFFFF',
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.05,
+          shadowRadius: 4,
+          elevation: 2,
+        }}
+      >
+        <Text style={{
+          fontSize: 16,
+          fontWeight: '500',
+          color: selectedOption ? '#0F172A' : '#94A3B8',
+        }}>
+          {selectedOption ? selectedOption.label : placeholder}
+        </Text>
+        <Ionicons
+          name={isOpen ? "chevron-up" : "chevron-down"}
+          size={20}
+          color="#64748B"
+        />
+      </TouchableOpacity>
+
+      {isOpen && (
+        <View style={{
+          marginTop: 8,
+          borderWidth: 1,
+          borderColor: '#E2E8F0',
+          borderRadius: 12,
+          backgroundColor: '#FFFFFF',
+          maxHeight: 200,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.1,
+          shadowRadius: 8,
+          elevation: 4,
+        }}>
+          <ScrollView>
+            {options.map((option) => (
+              <TouchableOpacity
+                key={option.value}
+                onPress={() => {
+                  onValueChange(option.value);
+                  setIsOpen(false);
+                }}
+                style={{
+                  paddingHorizontal: 16,
+                  paddingVertical: 12,
+                  borderBottomWidth: 1,
+                  borderBottomColor: '#F1F5F9',
+                  backgroundColor: value === option.value ? '#ECFDF5' : 'transparent',
+                }}
+              >
+                <Text style={{
+                  fontSize: 16,
+                  fontWeight: value === option.value ? '600' : '500',
+                  color: value === option.value ? '#065F46' : '#0F172A',
+                }}>
+                  {option.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
+      {error && (
+        <Text style={{
+          color: '#EF4444',
+          fontSize: 14,
+          fontWeight: '500',
+          marginTop: 6,
+          marginLeft: 4
+        }}>
+          {error}
+        </Text>
+      )}
+    </View>
+  );
+};
+
 const FormInput = ({
   label,
   value,
@@ -1432,7 +817,15 @@ const PriceInput = ({
             </Text>
             <TextInput
               value={price}
-              onChangeText={onPriceChange}
+              onChangeText={(text) => {
+                // Only allow numbers and one decimal point
+                const filteredText = text.replace(/[^0-9.]/g, '');
+                const parts = filteredText.split('.');
+                const cleanText = parts.length > 2
+                  ? parts[0] + '.' + parts.slice(1).join('')
+                  : filteredText;
+                onPriceChange(cleanText);
+              }}
               placeholder="0"
               placeholderTextColor="#94A3B8"
               keyboardType="numeric"
@@ -1480,7 +873,15 @@ const PriceInput = ({
             </Text>
             <TextInput
               value={originalPrice}
-              onChangeText={onOriginalPriceChange}
+              onChangeText={(text) => {
+                // Only allow numbers and one decimal point
+                const filteredText = text.replace(/[^0-9.]/g, '');
+                const parts = filteredText.split('.');
+                const cleanText = parts.length > 2
+                  ? parts[0] + '.' + parts.slice(1).join('')
+                  : filteredText;
+                onOriginalPriceChange(cleanText);
+              }}
               placeholder="0"
               placeholderTextColor="#94A3B8"
               keyboardType="numeric"
@@ -1531,14 +932,17 @@ export default function AddProduct() {
     name: '',
     description: '',
     price: '',
+    costPrice: '',
     originalPrice: '',
     category: '',
     subcategory: '',
     brand: '',
     sku: '',
     stockQuantity: '',
-    unit: 'pcs',
+    minStock: '5',
+    unit: 'piece',
     weight: '',
+    weightUnit: 'g',
     dimensions: {
       length: '',
       width: '',
@@ -1567,8 +971,10 @@ export default function AddProduct() {
       case 2:
         if (!formData.price.trim()) newErrors.price = 'Price is required';
         if (parseFloat(formData.price) <= 0) newErrors.price = 'Price must be greater than 0';
+        if (formData.costPrice.trim() && parseFloat(formData.costPrice) < 0) newErrors.costPrice = 'Cost price cannot be negative';
         if (!formData.stockQuantity.trim()) newErrors.stockQuantity = 'Stock quantity is required';
         if (parseInt(formData.stockQuantity) < 0) newErrors.stockQuantity = 'Stock cannot be negative';
+        if (formData.minStock.trim() && parseInt(formData.minStock) < 0) newErrors.minStock = 'Minimum stock cannot be negative';
         break;
       case 3:
         // Optional fields, no validation needed
@@ -1609,45 +1015,101 @@ export default function AddProduct() {
 
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      Alert.alert(
-        'Success! 🎉',
-        'Your product has been added successfully and is now live in your store.',
-        [
-          {
-            text: 'Add Another',
-            onPress: () => {
-              setFormData({
-                name: '',
-                description: '',
-                price: '',
-                originalPrice: '',
-                category: '',
-                subcategory: '',
-                brand: '',
-                sku: '',
-                stockQuantity: '',
-                unit: 'pcs',
-                weight: '',
-                dimensions: { length: '', width: '', height: '' },
-                tags: [],
-                images: [],
-              });
-              setCurrentStep(1);
-              scrollViewRef.current?.scrollTo({ y: 0, animated: true });
-            },
+      // 1) Upload images if any
+      let imageUrls: string[] = [];
+      if (formData.images.length > 0) {
+        const files = new FormData();
+        formData.images.forEach((img, idx) => {
+          // Best-effort mime type; backend validates image/*
+          const name = `product_${Date.now()}_${idx}.jpg`;
+          const type = 'image/jpeg';
+          files.append('images', { uri: img.uri, name, type } as any);
+        });
+
+        try {
+          const uploadRes = await ProductsApi.uploadProductImages(files);
+          imageUrls = (uploadRes as any).urls || uploadRes?.data?.urls || [];
+        } catch (uploadErr: any) {
+          console.warn('Image upload failed, proceeding without images:', uploadErr?.message || uploadErr);
+        }
+      }
+
+      // 2) Generate SKU if not provided
+      let finalSku = formData.sku?.trim();
+      if (!finalSku) {
+        try {
+          const skuRes = await ProductsApi.generateSKU(formData.name.trim(), formData.category);
+          finalSku = skuRes?.sku || '';
+        } catch (e) {
+          finalSku = '';
+        }
+      }
+
+      // 3) Build payload
+      const payload: CreateProductRequest = {
+        name: formData.name.trim(),
+        description: formData.description.trim(),
+        sku: finalSku || `${formData.name.trim().slice(0,3).toUpperCase()}-${Date.now()}`,
+        category: formData.category,
+        subcategory: formData.subcategory || undefined,
+        brand: formData.brand || undefined,
+        price: parseFloat(formData.price),
+        costPrice: formData.costPrice ? parseFloat(formData.costPrice) : parseFloat(formData.price), // Use selling price as cost price if not specified
+        mrp: formData.originalPrice ? parseFloat(formData.originalPrice) : parseFloat(formData.price),
+        stock: parseInt(formData.stockQuantity || '0', 10) || 0,
+        minStock: parseInt(formData.minStock || '5', 10) || 5,
+        unit: formData.unit,
+        weight: formData.weight && formData.weight.trim() ? parseFloat(formData.weight.trim()) : null,
+        dimensions: (formData.dimensions.length?.trim() || formData.dimensions.width?.trim() || formData.dimensions.height?.trim())
+          ? {
+              length: formData.dimensions.length?.trim() ? parseFloat(formData.dimensions.length.trim()) || 0 : 0,
+              width: formData.dimensions.width?.trim() ? parseFloat(formData.dimensions.width.trim()) || 0 : 0,
+              height: formData.dimensions.height?.trim() ? parseFloat(formData.dimensions.height.trim()) || 0 : 0,
+            }
+          : null,
+        images: imageUrls,
+        tags: formData.tags || [],
+      };
+
+      // 4) Create product
+      await ProductsApi.createProduct(payload);
+
+      Alert.alert('Success! 🎉', 'Your product has been added successfully.', [
+        {
+          text: 'Add Another',
+          onPress: () => {
+            setFormData({
+              name: '',
+              description: '',
+              price: '',
+              costPrice: '',
+              originalPrice: '',
+              category: '',
+              subcategory: '',
+              brand: '',
+              sku: '',
+              stockQuantity: '',
+              minStock: '5',
+              unit: 'piece',
+              weight: '',
+              weightUnit: 'g',
+              dimensions: { length: '', width: '', height: '' },
+              tags: [],
+              images: [],
+            });
+            setCurrentStep(1);
+            scrollViewRef.current?.scrollTo({ y: 0, animated: true });
           },
-          {
-            text: 'View Products',
-            onPress: () => router.push('/(seller)/inventory' as any),
-            style: 'default',
-          },
-        ]
-      );
+        },
+        {
+          text: 'View Products',
+          onPress: () => router.push('/(seller)/inventory' as any),
+          style: 'default',
+        },
+      ]);
     } catch (error) {
-      Alert.alert('Error', 'Failed to add product. Please try again.');
+      const message = (error as any)?.message || 'Failed to add product. Please try again.';
+      Alert.alert('Error', message);
     } finally {
       setLoading(false);
     }
@@ -1795,59 +1257,53 @@ export default function AddProduct() {
               </Text>
             )}
 
+            <NumericInput
+              label="Cost Price (Optional)"
+              value={formData.costPrice}
+              onChangeText={(text) => setFormData(prev => ({ ...prev, costPrice: text }))}
+              placeholder="What you paid for this product"
+              icon="calculator-outline"
+              error={errors.costPrice}
+              allowDecimal={true}
+              maxLength={10}
+            />
+
             <View style={{ flexDirection: 'row', gap: 12, marginBottom: 24 }}>
-              <View style={{ flex: 2 }}>
-                <FormInput
+              <View style={{ flex: 1 }}>
+                <NumericInput
                   label="Stock Quantity"
                   value={formData.stockQuantity}
                   onChangeText={(text) => setFormData(prev => ({ ...prev, stockQuantity: text }))}
                   placeholder="0"
-                  keyboardType="numeric"
                   icon="cube-outline"
                   required
                   error={errors.stockQuantity}
+                  allowDecimal={false}
+                  maxLength={6}
                 />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{
-                  fontSize: 16,
-                  fontWeight: '700',
-                  color: '#0F172A',
-                  marginBottom: 8
-                }}>
-                  Unit
-                </Text>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  style={{ marginBottom: 24 }}
-                >
-                  {units.map((unit) => (
-                    <TouchableOpacity
-                      key={unit}
-                      onPress={() => setFormData(prev => ({ ...prev, unit }))}
-                      style={{
-                        marginRight: 8,
-                        paddingHorizontal: 12,
-                        paddingVertical: 8,
-                        borderRadius: 12,
-                        borderWidth: 1.5,
-                        borderColor: formData.unit === unit ? '#10B981' : '#E2E8F0',
-                        backgroundColor: formData.unit === unit ? '#ECFDF5' : '#FFFFFF',
-                        minWidth: 50,
-                      }}
-                    >
-                      <Text style={{
-                        fontSize: 14,
-                        fontWeight: '600',
-                        color: formData.unit === unit ? '#065F46' : '#64748B',
-                        textAlign: 'center'
-                      }}>
-                        {unit}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
+                <NumericInput
+                  label="Min Stock Alert"
+                  value={formData.minStock}
+                  onChangeText={(text) => setFormData(prev => ({ ...prev, minStock: text }))}
+                  placeholder="5"
+                  icon="alert-circle-outline"
+                  error={errors.minStock}
+                  allowDecimal={false}
+                  maxLength={4}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <DropdownInput
+                  label="Unit"
+                  value={formData.unit}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, unit: value }))}
+                  options={units}
+                  placeholder="Select unit"
+                  icon="apps-outline"
+                  required
+                />
               </View>
             </View>
 
@@ -1859,13 +1315,101 @@ export default function AddProduct() {
               icon="ribbon-outline"
             />
 
-            <FormInput
-              label="SKU / Product Code"
-              value={formData.sku}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, sku: text }))}
-              placeholder="e.g., PROD-001"
-              icon="barcode-outline"
-            />
+            <View style={{ marginBottom: 24 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Ionicons name="barcode-outline" size={16} color="#64748B" style={{ marginRight: 8 }} />
+                  <Text style={{
+                    fontSize: 16,
+                    fontWeight: '700',
+                    color: '#0F172A',
+                  }}>
+                    SKU / Product Code
+                  </Text>
+                </View>
+                {!formData.sku && formData.name && formData.category && (
+                  <TouchableOpacity
+                    onPress={async () => {
+                      try {
+                        const skuRes = await ProductsApi.generateSKU(formData.name.trim(), formData.category);
+                        setFormData(prev => ({ ...prev, sku: skuRes?.sku || '' }));
+                      } catch (error) {
+                        Alert.alert('Error', 'Failed to generate SKU. Please try again.');
+                      }
+                    }}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingHorizontal: 12,
+                      paddingVertical: 6,
+                      backgroundColor: '#10B981',
+                      borderRadius: 8,
+                      gap: 4,
+                    }}
+                  >
+                    <Ionicons name="refresh" size={14} color="#FFFFFF" />
+                    <Text style={{
+                      fontSize: 12,
+                      fontWeight: '600',
+                      color: '#FFFFFF'
+                    }}>
+                      Generate
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+              <TextInput
+                value={formData.sku}
+                onChangeText={(text) => setFormData(prev => ({ ...prev, sku: text }))}
+                placeholder="e.g., PROD-001 or click Generate"
+                placeholderTextColor="#94A3B8"
+                style={{
+                  borderWidth: 1.5,
+                  borderColor: formData.sku ? '#10B981' : '#E2E8F0',
+                  borderRadius: 16,
+                  paddingHorizontal: 16,
+                  paddingVertical: 14,
+                  fontSize: 16,
+                  fontWeight: '500',
+                  color: '#0F172A',
+                  backgroundColor: '#FFFFFF',
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.05,
+                  shadowRadius: 4,
+                  elevation: 2,
+                }}
+              />
+              {formData.sku && (
+                <View style={{
+                  marginTop: 8,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  paddingHorizontal: 12,
+                  paddingVertical: 8,
+                  backgroundColor: '#ECFDF5',
+                  borderRadius: 8,
+                  borderWidth: 1,
+                  borderColor: '#BBF7D0',
+                }}>
+                  <Ionicons name="checkmark-circle" size={16} color="#10B981" style={{ marginRight: 6 }} />
+                  <Text style={{
+                    fontSize: 12,
+                    color: '#065F46',
+                    fontWeight: '500',
+                    flex: 1
+                  }}>
+                    SKU: {formData.sku}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => setFormData(prev => ({ ...prev, sku: '' }))}
+                    style={{ padding: 2 }}
+                  >
+                    <Ionicons name="close-circle" size={16} color="#10B981" />
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
           </View>
         );
 
@@ -1882,13 +1426,29 @@ export default function AddProduct() {
               📦 Additional Details
             </Text>
 
-            <FormInput
-              label="Weight"
-              value={formData.weight}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, weight: text }))}
-              placeholder="e.g., 500g, 1.5kg"
-              icon="scale-outline"
-            />
+            <View style={{ flexDirection: 'row', gap: 12, marginBottom: 24 }}>
+              <View style={{ flex: 2 }}>
+                <NumericInput
+                  label="Weight"
+                  value={formData.weight}
+                  onChangeText={(text) => setFormData(prev => ({ ...prev, weight: text }))}
+                  placeholder="e.g., 500, 1.5"
+                  icon="scale-outline"
+                  allowDecimal={true}
+                  maxLength={8}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <DropdownInput
+                  label="Weight Unit"
+                  value={formData.weightUnit}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, weightUnit: value }))}
+                  options={weightUnits}
+                  placeholder="Unit"
+                  icon="fitness-outline"
+                />
+              </View>
+            </View>
 
             <View style={{ marginBottom: 24 }}>
               <Text style={{
@@ -1904,13 +1464,21 @@ export default function AddProduct() {
                 <View style={{ flex: 1 }}>
                   <TextInput
                     value={formData.dimensions.length}
-                    onChangeText={(text) => setFormData(prev => ({ 
-                      ...prev, 
-                      dimensions: { ...prev.dimensions, length: text } 
-                    }))}
+                    onChangeText={(text) => {
+                      const filteredText = text.replace(/[^0-9.]/g, '');
+                      const parts = filteredText.split('.');
+                      const cleanText = parts.length > 2
+                        ? parts[0] + '.' + parts.slice(1).join('')
+                        : filteredText;
+                      setFormData(prev => ({
+                        ...prev,
+                        dimensions: { ...prev.dimensions, length: cleanText }
+                      }));
+                    }}
                     placeholder="Length"
                     placeholderTextColor="#94A3B8"
                     keyboardType="numeric"
+                    maxLength={6}
                     style={{
                       borderWidth: 1.5,
                       borderColor: '#E2E8F0',
@@ -1931,13 +1499,21 @@ export default function AddProduct() {
                 <View style={{ flex: 1 }}>
                   <TextInput
                     value={formData.dimensions.width}
-                    onChangeText={(text) => setFormData(prev => ({ 
-                      ...prev, 
-                      dimensions: { ...prev.dimensions, width: text } 
-                    }))}
+                    onChangeText={(text) => {
+                      const filteredText = text.replace(/[^0-9.]/g, '');
+                      const parts = filteredText.split('.');
+                      const cleanText = parts.length > 2
+                        ? parts[0] + '.' + parts.slice(1).join('')
+                        : filteredText;
+                      setFormData(prev => ({
+                        ...prev,
+                        dimensions: { ...prev.dimensions, width: cleanText }
+                      }));
+                    }}
                     placeholder="Width"
                     placeholderTextColor="#94A3B8"
                     keyboardType="numeric"
+                    maxLength={6}
                     style={{
                       borderWidth: 1.5,
                       borderColor: '#E2E8F0',
@@ -1958,13 +1534,21 @@ export default function AddProduct() {
                 <View style={{ flex: 1 }}>
                   <TextInput
                     value={formData.dimensions.height}
-                    onChangeText={(text) => setFormData(prev => ({ 
-                      ...prev, 
-                      dimensions: { ...prev.dimensions, height: text } 
-                    }))}
+                    onChangeText={(text) => {
+                      const filteredText = text.replace(/[^0-9.]/g, '');
+                      const parts = filteredText.split('.');
+                      const cleanText = parts.length > 2
+                        ? parts[0] + '.' + parts.slice(1).join('')
+                        : filteredText;
+                      setFormData(prev => ({
+                        ...prev,
+                        dimensions: { ...prev.dimensions, height: cleanText }
+                      }));
+                    }}
                     placeholder="Height"
                     placeholderTextColor="#94A3B8"
                     keyboardType="numeric"
+                    maxLength={6}
                     style={{
                       borderWidth: 1.5,
                       borderColor: '#E2E8F0',

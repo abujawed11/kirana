@@ -188,6 +188,52 @@ export default function SellerDashboard() {
           />
         </View>
 
+        {/* Featured Action - New Product */}
+        {!needsKyc && (
+          <TouchableOpacity
+            onPress={() => router.push("/(seller)/inventory/new")}
+            style={{
+              backgroundColor: "#2563EB",
+              borderRadius: 16,
+              padding: 20,
+              shadowColor: "#2563EB",
+              shadowOffset: { width: 0, height: 8 },
+              shadowOpacity: 0.25,
+              shadowRadius: 16,
+              elevation: 8,
+              marginBottom: 8,
+            }}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
+                  <View style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 8,
+                    backgroundColor: "rgba(255, 255, 255, 0.2)",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    marginRight: 12,
+                  }}>
+                    <Ionicons name="add-circle" size={20} color="#FFFFFF" />
+                  </View>
+                  <Text style={{ fontSize: 18, fontWeight: "800", color: "#FFFFFF" }}>
+                    Add New Product
+                  </Text>
+                </View>
+                <Text style={{ fontSize: 14, color: "#E0E7FF", marginBottom: 4 }}>
+                  List a new product in your inventory
+                </Text>
+                <Text style={{ fontSize: 12, color: "#C7D2FE" }}>
+                  ✓ Easy product form  ✓ Auto SKU generation  ✓ Image upload
+                </Text>
+              </View>
+              <Ionicons name="arrow-forward" size={24} color="#FFFFFF" />
+            </View>
+          </TouchableOpacity>
+        )}
+
         {/* Quick Actions */}
         <View
           style={{
@@ -207,10 +253,31 @@ export default function SellerDashboard() {
 
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
             {[
-              { label: "New Product", icon: "add-circle-outline", route: "/(seller)/inventory/new" },
-              { label: "Bulk Upload", icon: "cloud-upload-outline", route: "/(seller)/inventory/bulk-upload" },
-              { label: "Offers", icon: "pricetags-outline", route: "/(seller)/offers" },
-              { label: "Payouts", icon: "card-outline", route: "/(seller)/payouts" },
+              {
+                label: "New Product",
+                icon: "add-circle-outline",
+                route: "/(seller)/inventory/new",
+                color: "#2563EB",
+                featured: true
+              },
+              {
+                label: "Bulk Upload",
+                icon: "cloud-upload-outline",
+                route: "/(seller)/inventory/bulk-upload",
+                color: "#059669"
+              },
+              {
+                label: "Offers",
+                icon: "pricetags-outline",
+                route: "/(seller)/offers",
+                color: "#DC2626"
+              },
+              {
+                label: "Payouts",
+                icon: "card-outline",
+                route: "/(seller)/payouts",
+                color: "#7C2D12"
+              },
             ].map((it) => (
               <TouchableOpacity
                 key={it.label}
@@ -225,42 +292,71 @@ export default function SellerDashboard() {
                   flexGrow: 1,
                   minWidth: "47%",
                   flexBasis: "47%",
-                  borderWidth: 1,
-                  borderColor: needsKyc ? "#FCD34D" : "#E5E7EB",
+                  borderWidth: needsKyc ? 1 : 0,
+                  borderColor: needsKyc ? "#FCD34D" : "transparent",
                   borderRadius: 12,
-                  paddingVertical: 14,
+                  paddingVertical: 16,
                   paddingHorizontal: 12,
                   backgroundColor: needsKyc ? "#FFFBEB" : "#F9FAFB",
                   flexDirection: "row",
                   alignItems: "center",
-                  gap: 8,
+                  gap: 12,
                   opacity: needsKyc ? 0.8 : 1,
+                  shadowColor: "#000",
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.05,
+                  shadowRadius: 4,
+                  elevation: 2,
                 }}
               >
-                <Ionicons
-                  name={needsKyc ? "lock-closed" : it.icon as any}
-                  size={18}
-                  color={needsKyc ? "#D97706" : "#111827"}
-                />
+                <View style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 10,
+                  backgroundColor: needsKyc ? "#FEF3C7" : `${it.color}15`,
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}>
+                  <Ionicons
+                    name={needsKyc ? "lock-closed" : it.icon as any}
+                    size={20}
+                    color={needsKyc ? "#D97706" : it.color}
+                  />
+                </View>
                 <View style={{ flex: 1 }}>
                   <Text style={{
                     fontWeight: "700",
                     color: needsKyc ? "#D97706" : "#111827",
-                    fontSize: 14
+                    fontSize: 15,
+                    marginBottom: 2
                   }}>
                     {it.label}
                   </Text>
-                  {needsKyc && (
+                  {needsKyc ? (
                     <Text style={{
                       fontSize: 11,
                       color: "#92400E",
-                      marginTop: 2,
                       fontWeight: "500"
                     }}>
-                      KYC Required
+                      Complete KYC to unlock
+                    </Text>
+                  ) : (
+                    <Text style={{
+                      fontSize: 12,
+                      color: "#6B7280",
+                      fontWeight: "500"
+                    }}>
+                      {it.label === "New Product" ? "Add inventory" :
+                       it.label === "Bulk Upload" ? "Upload CSV" :
+                       it.label === "Offers" ? "Create deals" : "View earnings"}
                     </Text>
                   )}
                 </View>
+                <Ionicons
+                  name="chevron-forward"
+                  size={16}
+                  color="#9CA3AF"
+                />
               </TouchableOpacity>
             ))}
           </View>

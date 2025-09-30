@@ -144,3 +144,6 @@ vite.config.ts.timestamp-*
 .env.local
 .env.development
 .env.production
+
+
+/uploads
