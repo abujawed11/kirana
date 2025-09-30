@@ -13,7 +13,7 @@ export interface RequestOptions<TBody = unknown> {
 
 // Keep this simple to avoid env typing issues.
 // TODO: wire to Expo extra if you want: Constants.expoConfig?.extra?.apiUrl
-export const BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://10.20.2.78:5000";
+export const BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://10.20.2.78:5001";
 
 // Token storage keys
 const STORAGE_TOKEN_KEY = "auth_token";

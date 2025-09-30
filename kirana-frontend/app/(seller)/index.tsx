@@ -173,11 +173,11 @@ export default function SellerDashboard() {
 
         <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
           <Card
-            title="Pending Orders"
-            value="3"
-            icon="time-outline"
-            color="#3B82F6"
-            onPress={() => router.push("/(seller)/orders?filter=pending" as any)}
+            title="My Products"
+            value="24"
+            icon="cube-outline"
+            color="#8B5CF6"
+            onPress={() => router.push("/(seller)/inventory")}
           />
           <Card
             title="Low Stock"
@@ -185,6 +185,23 @@ export default function SellerDashboard() {
             icon="alert-circle-outline"
             color="#EF4444"
             onPress={() => router.push("/(seller)/inventory?filter=low" as any)}
+          />
+        </View>
+
+        <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
+          <Card
+            title="Pending Orders"
+            value="3"
+            icon="time-outline"
+            color="#3B82F6"
+            onPress={() => router.push("/(seller)/orders?filter=pending" as any)}
+          />
+          <Card
+            title="Categories"
+            value="8"
+            icon="grid-outline"
+            color="#F59E0B"
+            onPress={() => router.push("/(seller)/inventory")}
           />
         </View>
 
@@ -254,11 +271,17 @@ export default function SellerDashboard() {
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
             {[
               {
+                label: "My Products",
+                icon: "cube-outline",
+                route: "/(seller)/inventory",
+                color: "#8B5CF6",
+                featured: true
+              },
+              {
                 label: "New Product",
                 icon: "add-circle-outline",
                 route: "/(seller)/inventory/new",
-                color: "#2563EB",
-                featured: true
+                color: "#2563EB"
               },
               {
                 label: "Bulk Upload",
@@ -267,16 +290,10 @@ export default function SellerDashboard() {
                 color: "#059669"
               },
               {
-                label: "Offers",
-                icon: "pricetags-outline",
-                route: "/(seller)/offers",
-                color: "#DC2626"
-              },
-              {
-                label: "Payouts",
-                icon: "card-outline",
-                route: "/(seller)/payouts",
-                color: "#7C2D12"
+                label: "Orders",
+                icon: "bag-handle-outline",
+                route: "/(seller)/orders",
+                color: "#F59E0B"
               },
             ].map((it) => (
               <TouchableOpacity
@@ -346,9 +363,10 @@ export default function SellerDashboard() {
                       color: "#6B7280",
                       fontWeight: "500"
                     }}>
-                      {it.label === "New Product" ? "Add inventory" :
+                      {it.label === "My Products" ? "View & manage" :
+                       it.label === "New Product" ? "Add inventory" :
                        it.label === "Bulk Upload" ? "Upload CSV" :
-                       it.label === "Offers" ? "Create deals" : "View earnings"}
+                       it.label === "Orders" ? "Track sales" : "View earnings"}
                     </Text>
                   )}
                 </View>

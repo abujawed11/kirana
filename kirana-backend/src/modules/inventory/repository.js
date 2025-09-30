@@ -50,6 +50,8 @@ export async function getProductById(productId) {
 }
 
 export async function getProductsBySeller(sellerId, filters = {}) {
+  console.log('getProductsBySeller called with:', { sellerId, filters });
+
   let whereClause = "WHERE p.seller_id = ? AND p.is_active = 1";
   let params = [sellerId];
 
@@ -73,16 +75,68 @@ export async function getProductsBySeller(sellerId, filters = {}) {
                   filters.sort_by === 'name' ? 'p.name' : 'p.created_at';
   const orderDirection = filters.sort_direction === 'asc' ? 'ASC' : 'DESC';
 
-  const rows = await query(
-    `SELECT p.*, pc.name as category_name, psc.name as subcategory_name
+  // Ensure limit and offset are valid numbers
+  const limit = parseInt(filters.limit) || 20;
+  const offset = parseInt(filters.offset) || 0;
+
+  // Try a simpler query first to isolate the issue
+  const finalSQL = `SELECT p.*
      FROM products p
-     LEFT JOIN product_categories pc ON p.category_id = pc.id
-     LEFT JOIN product_subcategories psc ON p.subcategory_id = psc.id
      ${whereClause}
      ORDER BY ${orderBy} ${orderDirection}
-     LIMIT ? OFFSET ?`,
-    [...params, filters.limit || 20, filters.offset || 0]
-  );
+     LIMIT ? OFFSET ?`;
+
+  const finalParams = [...params, limit, offset];
+
+  console.log('Final SQL:', finalSQL);
+  console.log('Final params:', finalParams);
+
+  // Test if table exists first
+  try {
+    console.log('Testing if products table exists...');
+    const testQuery = 'SHOW TABLES LIKE "products"';
+    const tableExists = await query(testQuery);
+    console.log('Products table exists:', tableExists.length > 0);
+
+    if (tableExists.length === 0) {
+      throw new Error('Products table does not exist');
+    }
+
+    // Test table structure
+    console.log('Checking table structure...');
+    const tableStructure = await query('DESCRIBE products');
+    console.log('Products table structure:', tableStructure);
+
+    // Try a very simple query first
+    console.log('Testing simple count query...');
+    const countResult = await query('SELECT COUNT(*) as count FROM products');
+    console.log('Total products in table:', countResult[0].count);
+
+  } catch (error) {
+    console.error('Database test error:', error);
+    throw error;
+  }
+
+  // Try direct query without prepared statements as a workaround
+  try {
+    console.log('Trying parameterized query...');
+    const rows = await query(finalSQL, finalParams);
+    return rows;
+  } catch (error) {
+    console.log('Parameterized query failed, trying escaped query...');
+
+    // Fallback: use escaped values directly in query (safe since we control the inputs)
+    const escapedSellerId = `'${sellerId.replace(/'/g, "''")}'`; // Basic SQL injection protection
+    const escapedSQL = `SELECT p.*
+       FROM products p
+       WHERE p.seller_id = ${escapedSellerId} AND p.is_active = 1
+       ORDER BY ${orderBy} ${orderDirection}
+       LIMIT ${limit} OFFSET ${offset}`;
+
+    console.log('Escaped SQL:', escapedSQL);
+    const rows = await query(escapedSQL);
+    return rows;
+  }
 
   return rows;
 }

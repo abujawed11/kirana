@@ -76,7 +76,50 @@ export class ProductsApi {
 
   static async getProducts(sellerId?: string): Promise<Product[]> {
     const params = sellerId ? `?sellerId=${sellerId}` : '';
-    return api.get<Product[]>(`/products${params}`);
+    const response = await api.get<any>(`/products${params}`);
+
+    console.log('Raw getProducts response:', response);
+
+    // Backend returns { success: true, data: Product[], count: number }
+    // We need to extract the data field
+    let products = [];
+    if (response.data && Array.isArray(response.data)) {
+      products = response.data;
+    } else if (Array.isArray(response)) {
+      products = response;
+    } else {
+      console.error('Unexpected response format:', response);
+      return [];
+    }
+
+    // Transform backend snake_case format to frontend camelCase format
+    return products.map((product: any) => ({
+      id: String(product.id),
+      name: product.name,
+      description: product.description || '',
+      sku: product.sku,
+      category: product.category_name || product.category || '', // backend might return category_name from JOIN
+      subcategory: product.subcategory_name || product.subcategory,
+      brand: product.brand,
+      price: Number(product.price),
+      costPrice: Number(product.cost_price || 0),
+      mrp: Number(product.mrp || 0),
+      stock: Number(product.stock || 0),
+      minStock: Number(product.min_stock || 0),
+      unit: product.unit || 'piece',
+      weight: product.weight ? Number(product.weight) : undefined,
+      dimensions: product.length && product.width && product.height ? {
+        length: Number(product.length),
+        width: Number(product.width),
+        height: Number(product.height)
+      } : undefined,
+      images: product.images ? product.images.map((img: any) => img.image_url || img) : [],
+      tags: product.tags ? product.tags.map((tag: any) => tag.name || tag) : [],
+      isActive: Boolean(product.is_active),
+      sellerId: product.seller_id,
+      createdAt: product.created_at,
+      updatedAt: product.updated_at
+    }));
   }
 
   static async getProduct(id: string): Promise<Product> {
@@ -95,7 +138,7 @@ export class ProductsApi {
     [x: string]: any; urls: string[] 
 }> {
     // For FormData uploads, we need to use custom fetch since the api client expects JSON
-    const BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://10.20.2.78:5000";
+    const BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://10.20.2.78:5001";
     const url = `${BASE_URL}/products/upload-images`;
 
     console.log('Upload URL:', url);
