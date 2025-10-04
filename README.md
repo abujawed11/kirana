@@ -87,3 +87,54 @@ Kirana_1
 └─ README.md
 
 ```
+```
+Kirana_1
+├─ kirana-backend
+├─ kirana-frontend
+│  ├─ .expo
+│  │  ├─ devices.json
+│  │  ├─ README.md
+│  │  └─ types
+│  │     └─ router.d.ts
+│  ├─ app
+│  │  ├─ (auth)
+│  │  │  ├─ forgot-password.tsx
+│  │  │  ├─ login.tsx
+│  │  │  ├─ signup.tsx
+│  │  │  └─ _layout.tsx
+│  │  ├─ (main)
+│  │  │  ├─ dashboard
+│  │  │  │  ├─ index.tsx
+│  │  │  │  └─ _layout.tsx
+│  │  │  └─ _layout.tsx
+│  │  ├─ index.tsx
+│  │  └─ _layout.tsx
+│  ├─ app.json
+│  ├─ assets
+│  │  └─ images
+│  │     ├─ android-icon-background.png
+│  │     ├─ android-icon-foreground.png
+│  │     ├─ android-icon-monochrome.png
+│  │     ├─ favicon.png
+│  │     ├─ icon.png
+│  │     ├─ partial-react-logo.png
+│  │     ├─ react-logo.png
+│  │     ├─ react-logo@2x.png
+│  │     ├─ react-logo@3x.png
+│  │     └─ splash-icon.png
+│  ├─ babel.config.js
+│  ├─ context
+│  │  └─ AuthContext.tsx
+│  ├─ eslint.config.js
+│  ├─ expo-env.d.ts
+│  ├─ global.css
+│  ├─ metro.config.js
+│  ├─ nativewind-env.d.ts
+│  ├─ package-lock.json
+│  ├─ package.json
+│  ├─ README.md
+│  ├─ tailwind.config.js
+│  └─ tsconfig.json
+└─ README.md
+
+```
