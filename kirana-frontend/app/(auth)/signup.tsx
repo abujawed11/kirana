@@ -1,47 +1,55 @@
+
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, Alert, ActivityIndicator } from "react-native";
 import { Link, useRouter } from "expo-router";
 import { API_BASE } from "@/config/api";
-// const API_BASE = process.env.EXPO_PUBLIC_API_URL || "http://localhost:5080";
-
 
 export default function Signup() {
   const router = useRouter();
 
   const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");      // optional if email present
+  const [email, setEmail] = useState("");      // optional if phone present
   const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
 
   const validate = () => {
     const cleanPhone = phone.replace(/\D/g, "");
+    const hasEmail = !!email.trim();
+    const hasPhone = !!cleanPhone;
+
     if (name.trim().length < 2) return "Please enter your full name.";
-    if (!/^\S+@\S+\.\S+$/.test(email.trim())) return "Please enter a valid email.";
-    if (cleanPhone.length !== 10) return "Enter a valid 10-digit mobile number.";
+    if (!hasEmail && !hasPhone) return "Provide either email or 10-digit phone.";
+    if (hasEmail && !/^\S+@\S+\.\S+$/.test(email.trim())) return "Please enter a valid email.";
+    if (hasPhone && cleanPhone.length !== 10) return "Enter a valid 10-digit mobile number.";
     if (password.length < 6) return "Password must be at least 6 characters.";
+    if (password !== confirm) return "Passwords do not match.";
     return null;
   };
 
   const onSignup = async () => {
     const err = validate();
-    if (err) {
-      Alert.alert("Invalid details", err);
-      return;
-    }
+    if (err) return Alert.alert("Invalid details", err);
 
     try {
       setLoading(true);
 
-      const res = await fetch(`${API_BASE}/auth/signup`, {
+      const body = {
+        name: name.trim(),
+        email: email.trim() || undefined,
+        phone: phone.replace(/\D/g, "") || undefined,
+        password,
+        // store_name will be collected later during KYC
+      };
+
+      const url = `${API_BASE}/auth/seller/signup`;
+      console.log("🔎 POST", url, body);
+
+      const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: name.trim(),
-          email: email.trim(),
-          phone: phone.replace(/\D/g, ""),
-          password,
-        }),
+        body: JSON.stringify(body),
       });
 
       if (!res.ok) {
@@ -50,15 +58,10 @@ export default function Signup() {
       }
 
       const data: { success: boolean; message?: string } = await res.json();
+      if (!data.success) throw new Error(data.message || "Signup failed. Try again.");
 
-      if (!data.success) {
-        throw new Error(data.message || "Signup failed. Try again.");
-      }
-
-      // ✅ Instead of logging in directly, redirect to login screen
-      Alert.alert("Success", "Account created! Please log in.");
+      Alert.alert("Success", "Seller account created! Please log in.");
       router.replace("/(auth)/login");
-
     } catch (e: any) {
       Alert.alert("Error", e?.message || "Something went wrong");
     } finally {
@@ -68,7 +71,7 @@ export default function Signup() {
 
   return (
     <View className="flex-1 bg-white px-6 justify-center">
-      <Text className="text-3xl font-bold mb-2 text-green-700">Create account</Text>
+      <Text className="text-3xl font-bold mb-2 text-green-700">Create seller account</Text>
       <Text className="text-gray-600 mb-6">Apne Mohalle ka Apna App</Text>
 
       {/* Name */}
@@ -79,23 +82,23 @@ export default function Signup() {
         className="border border-gray-300 rounded-2xl px-4 py-3 mb-4 bg-white"
       />
 
-      {/* Phone */}
+      {/* Phone (optional if email provided) */}
       <TextInput
         value={phone}
         onChangeText={setPhone}
         keyboardType="phone-pad"
-        placeholder="10-digit Phone"
+        placeholder="10-digit Phone (optional)"
         maxLength={14}
         className="border border-gray-300 rounded-2xl px-4 py-3 mb-4 bg-white"
       />
 
-      {/* Email */}
+      {/* Email (optional if phone provided) */}
       <TextInput
         value={email}
         onChangeText={setEmail}
         keyboardType="email-address"
         autoCapitalize="none"
-        placeholder="Email"
+        placeholder="Email (optional)"
         className="border border-gray-300 rounded-2xl px-4 py-3 mb-4 bg-white"
       />
 
@@ -104,7 +107,16 @@ export default function Signup() {
         value={password}
         onChangeText={setPassword}
         secureTextEntry
-        placeholder="Password"
+        placeholder="Password (min 6 chars)"
+        className="border border-gray-300 rounded-2xl px-4 py-3 mb-4 bg-white"
+      />
+
+      {/* Confirm Password */}
+      <TextInput
+        value={confirm}
+        onChangeText={setConfirm}
+        secureTextEntry
+        placeholder="Confirm Password"
         className="border border-gray-300 rounded-2xl px-4 py-3 mb-2 bg-white"
       />
 
@@ -114,11 +126,7 @@ export default function Signup() {
         className="mt-4 rounded-2xl py-3 items-center"
         style={{ backgroundColor: loading ? "#93c5fd" : "#f97316" }}
       >
-        {loading ? (
-          <ActivityIndicator />
-        ) : (
-          <Text className="text-white font-semibold">Create Account</Text>
-        )}
+        {loading ? <ActivityIndicator /> : <Text className="text-white font-semibold">Create Account</Text>}
       </TouchableOpacity>
 
       <View className="mt-4">
