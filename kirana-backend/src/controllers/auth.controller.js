@@ -3,48 +3,45 @@ import bcrypt from "bcryptjs";
 import { pool } from "../config/db.js";
 import { signToken } from "../utils/jwt.js";
 
+
 export async function signupSeller(req, res) {
   try {
     const { name, email, phone, password } = req.body || {};
 
-    // ✅ New validation: email OR phone, not necessarily both
-    const hasEmail = !!(email && String(email).trim());
-    const cleanPhone = phone ? String(phone).replace(/\D/g, "") : "";
-    const hasPhone = !!cleanPhone;
-
-    if (!name || !password || (!hasEmail && !hasPhone)) {
-      return res.status(400).json({ success: false, message: "Missing fields" });
+    if (!name || !email || !phone || !password) {
+      return res.status(400).json({ success: false, message: "All fields are required" });
     }
 
-    // Optional: normalize empty values to null for SQL
-    const normEmail = hasEmail ? String(email).trim() : null;
-    const normPhone = hasPhone ? cleanPhone : null;
+    const normEmail = String(email).trim().toLowerCase();
+    const cleanPhone = String(phone).replace(/\D/g, "");
 
-    // Uniqueness check within SELLER role (composite uniqueness by role)
+    if (!/^\S+@\S+\.\S+$/.test(normEmail)) {
+      return res.status(400).json({ success: false, message: "Invalid email format" });
+    }
+    if (cleanPhone.length !== 10) {
+      return res.status(400).json({ success: false, message: "Invalid phone number" });
+    }
+
+    // Uniqueness check
     const [exists] = await pool.query(
       "SELECT id FROM users WHERE (email = ? AND role='SELLER') OR (phone = ? AND role='SELLER') LIMIT 1",
-      [normEmail, normPhone]
+      [normEmail, cleanPhone]
     );
     if (exists.length) {
-      return res.status(409).json({ success: false, message: "Seller with same email/phone exists" });
+      return res.status(409).json({ success: false, message: "Seller already exists with same email or phone" });
     }
 
     const hash = await bcrypt.hash(password, 10);
     const [result] = await pool.query(
       "INSERT INTO users (name, email, phone, password_hash, role) VALUES (?, ?, ?, ?, 'SELLER')",
-      [name.trim(), normEmail, normPhone, hash]
+      [name.trim(), normEmail, cleanPhone, hash]
     );
-    const userId = result.insertId;
 
-    // Optional: generate display code like USR0001
+    const userId = result.insertId;
     const userCode = `USR${String(userId).padStart(4, "0")}`;
     await pool.query("UPDATE users SET user_code=? WHERE id=?", [userCode, userId]);
 
-    // ❌ No store_name here — collect later during KYC
-    // If you still want a placeholder seller_profile row:
-    // await pool.query("INSERT INTO seller_profiles (user_id, store_name) VALUES (?, ?)", [userId, '']);
-
-    return res.json({ success: true, message: "Seller created. Please log in." });
+    return res.json({ success: true, message: "Seller account created. Please log in." });
   } catch (e) {
     console.error("signupSeller error:", e);
     res.status(500).json({ success: false, message: "Server error" });
